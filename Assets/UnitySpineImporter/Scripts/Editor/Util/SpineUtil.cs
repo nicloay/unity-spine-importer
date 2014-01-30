@@ -103,7 +103,7 @@ namespace UnitySpineImporter{
 						fitSize = sizes[nextI];
 				}
 				if (importer.maxTextureSize!=fitSize){
-					Debug.LogWarning("change default size to " + fitSize+ " for "+imagePath)
+					Debug.LogWarning("change default size to " + fitSize+ " for "+imagePath);
 					importer.maxTextureSize = fitSize;
 				}
 				foreach(string platform in platforms){
