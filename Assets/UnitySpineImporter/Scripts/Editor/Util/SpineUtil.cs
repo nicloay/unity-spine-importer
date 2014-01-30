@@ -59,7 +59,15 @@ namespace UnitySpineImporter{
 			MethodInfo updateMaskMethod = maskUtilType.GetMethod("UpdateTransformMask", BindingFlags.Static | BindingFlags.Public);
 			string[] transofrmPaths = getTransformPaths(gameObject, spineData);
 
-			updateMaskMethod.Invoke(null, new System.Object[]{avatarMask,transofrmPaths, null});
+			//updateMaskMethod.Invoke(null, new System.Object[]{avatarMask,transofrmPaths, null});
+			avatarMask.Reset();
+			avatarMask.transformCount = transofrmPaths.Length;
+			for (int i=0; i< transofrmPaths.Length; i++){
+
+				avatarMask.SetTransformPath(i, transofrmPaths[i]);
+				avatarMask.SetTransformActive(i, true);
+			}
+
 			AssetDatabase.CreateAsset(avatar,directory+"/"+name+".anim.asset");
 			AssetDatabase.CreateAsset(avatarMask,directory+"/"+name+".mask.asset");
 			EditorUtility.SetDirty(avatarMask);
@@ -68,13 +76,14 @@ namespace UnitySpineImporter{
 
 		public static string[] getTransformPaths(GameObject go, SpineData spineData){
 			List<String> result = new List<string>();
+			result.Add("");
 			 foreach(Transform t in go.GetComponentsInChildren<Transform>(true)){
 				string path = AnimationUtility.CalculateTransformPath(t,go.transform);
 				if (t.name.StartsWith(SLOT_PREFIX+" [") && t.name.EndsWith("]")){
 					string slotName = t.name.Remove(t.name.Length -1);
 					slotName = slotName.Remove(0,(SLOT_PREFIX+" [").Length );
 					Debug.Log("slotName = "+slotName);
-					if (spineData.slotPathByName.ContainsKey(slotName) && spineData.slotPathByName[slotName]==path)
+					if (spineData.slotPathByName.ContainsKey(slotName) && spineData.slotPathByName[slotName]==path)					
 						result.Add(path);
 				}else {
 					if (spineData.bonePathByName.ContainsKey(t.name) && spineData.bonePathByName[t.name]==path) 
