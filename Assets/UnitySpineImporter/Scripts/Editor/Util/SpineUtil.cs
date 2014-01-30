@@ -102,10 +102,12 @@ namespace UnitySpineImporter{
 					if (max > sizes[i] && max <= sizes[nextI] )
 						fitSize = sizes[nextI];
 				}
+
 				if (importer.maxTextureSize!=fitSize){
 					Debug.LogWarning("change default size to " + fitSize+ " for "+imagePath);
 					importer.maxTextureSize = fitSize;
 				}
+
 				foreach(string platform in platforms){
 					int maxTextureSize;
 					TextureImporterFormat textureFormat;
@@ -129,7 +131,6 @@ namespace UnitySpineImporter{
 				Texture2D tex = AssetDatabase.LoadAssetAtPath(imagePath, typeof(Texture2D )) as Texture2D;
 				Vector2 atlasSize = new Vector2(tex.width, tex.height);
 				TextureImporter importer = TextureImporter.GetAtPath(imagePath) as TextureImporter;
-				importer.maxTextureSize = 2048;
 				importer.spritesheet = getSpriteMetadata(spineAtlas, atlasSize);
 				importer.textureType = TextureImporterType.Sprite;
 				importer.spriteImportMode = SpriteImportMode.Multiple;
