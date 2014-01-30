@@ -6,8 +6,15 @@ using System.Collections.Generic;
 
 
 namespace UnitySpineImporter{
+	public enum AnimationImportType{
+		MECANIM,
+		LEGACY
+	}
+
 	public class SpineImporterWizard :ScriptableWizard {
 		public int pixelsPerUnit = 100;
+		public bool buildAvatarMask = true;
+		public AnimationImportType animationImportType = AnimationImportType.MECANIM;
 		[HideInInspector]
 		public string path;
 
@@ -32,6 +39,8 @@ namespace UnitySpineImporter{
 			else 
 				errorString ="";
 			isValid = errorString.Equals("");
+			if (animationImportType == AnimationImportType.LEGACY && buildAvatarMask)
+				helpString += "\n buildAvatarMask will be ignored";
 		}
 
 
@@ -54,8 +63,14 @@ namespace UnitySpineImporter{
 					rootGO.name = name;
 					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
 					SkinController sk = SpineUtil.addSkinController(rootGO, spineData, skins, slotByName);
-					SpineUtil.addAnimator(rootGO);
-					SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot, pixelsPerUnit);
+					if (animationImportType == AnimationImportType.MECANIM){
+						Animator animator = SpineUtil.addAnimator(rootGO);
+						if (buildAvatarMask)
+							SpineUtil.builAvatarMask(rootGO,spineData, animator, directory, name);
+					}
+
+					ModelImporterAnimationType modelImporterAnimationType = getModelImporterAnimationType();
+					SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot, pixelsPerUnit, modelImporterAnimationType);
 					sk.showDefaulSlots();
 
 					SpineUtil.buildPrefab(rootGO, directory, name);
@@ -72,6 +87,19 @@ namespace UnitySpineImporter{
 			}
 		}
 
+		ModelImporterAnimationType getModelImporterAnimationType(){
+			ModelImporterAnimationType result = ModelImporterAnimationType.Generic;
+			switch(animationImportType){
+			case AnimationImportType.LEGACY:
+				result = ModelImporterAnimationType.Legacy;
+				break;
+			case AnimationImportType.MECANIM:
+				result = ModelImporterAnimationType.Generic;
+				break;
+			}
+			return result;
+		}
+		
 		static string getAtlasFilePath(string path){
 			string dir = Path.GetDirectoryName(path);
 			string fileName = Path.GetFileNameWithoutExtension(path+"ffff");
