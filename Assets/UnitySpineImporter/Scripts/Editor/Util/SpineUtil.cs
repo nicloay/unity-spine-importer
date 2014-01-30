@@ -79,15 +79,57 @@ namespace UnitySpineImporter{
 			return result.ToArray();
 		}
 
+		static int[] sizes = new int[]{0, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+		static string[] platforms = new string[]{"Web", "Standalone", "iPhone", "Android", "FlashPlayer"};
+		static void fixTextureSize(string imagePath){			 
+			TextureImporter importer =  TextureImporter.GetAtPath(imagePath) as TextureImporter;
+			if (importer != null) {
+				object[] args = new object[2] { 0, 0 };
+				MethodInfo mi = typeof(TextureImporter).GetMethod("GetWidthAndHeight", BindingFlags.NonPublic | BindingFlags.Instance);
+				mi.Invoke(importer, args);
+				
+				int width = (int)args[0];
+				int height = (int)args[1];
+
+				int max = Mathf.Max(width,height);
+				if (max > 4096){
+					Debug.LogError("original texture size is to big " + imagePath + " size=" + width + "x" + height);
+					return;
+				}
+
+				int fitSize = 0;
+				for (int i = 0,nextI =1; i < max && fitSize==0; i=nextI++ ) {
+					if (max > sizes[i] && max <= sizes[nextI] )
+						fitSize = sizes[nextI];
+				}
+				if (importer.maxTextureSize!=fitSize){
+					Debug.LogWarning("change default size to " + fitSize+ " for "+imagePath)
+					importer.maxTextureSize = fitSize;
+				}
+				foreach(string platform in platforms){
+					int maxTextureSize;
+					TextureImporterFormat textureFormat;
+					importer.GetPlatformTextureSettings(platform, out maxTextureSize, out textureFormat);
+					if (maxTextureSize != fitSize){
+						Debug.LogWarning("change specific size to " + fitSize + "on " + platform + " for " + imagePath);
+						importer.SetPlatformTextureSettings(platform, fitSize, textureFormat);
+					}
+				}
+				AssetDatabase.ImportAsset(imagePath, ImportAssetOptions.ForceSynchronousImport);
+			}
+		}
+		
 		public static void updateImporters(SpineMultiatlas multiatlas, string directory, int pixelsPerUnit, out SpritesByName spriteByName){
 			spriteByName = new SpritesByName();
 			foreach (SpineAtlas spineAtlas in multiatlas){
 				string imagePath = directory + "/" + spineAtlas.imageName;
 				if (!File.Exists(imagePath))
 					throw new AtlasImageNotFoundException("can't find " + spineAtlas.imageName + " image in " + directory + " folder");
+				fixTextureSize(imagePath);
 				Texture2D tex = AssetDatabase.LoadAssetAtPath(imagePath, typeof(Texture2D )) as Texture2D;
 				Vector2 atlasSize = new Vector2(tex.width, tex.height);
 				TextureImporter importer = TextureImporter.GetAtPath(imagePath) as TextureImporter;
+				importer.maxTextureSize = 2048;
 				importer.spritesheet = getSpriteMetadata(spineAtlas, atlasSize);
 				importer.textureType = TextureImporterType.Sprite;
 				importer.spriteImportMode = SpriteImportMode.Multiple;
