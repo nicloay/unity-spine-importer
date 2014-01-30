@@ -7,6 +7,7 @@ using System;
 using UnityEditorInternal;
 using CurveExtended;
 using LitJson;
+using System.Reflection;
 
 namespace UnitySpineImporter{
 	public class AtlasImageNotFoundException: System.Exception{
@@ -44,6 +45,45 @@ namespace UnitySpineImporter{
 				PrefabUtility.ReplacePrefab(gameObject, oldPrefab, ReplacePrefabOptions.ReplaceNameBased);
 		}
 
+		public static void builAvatarMask(GameObject gameObject, SpineData spineData, Animator animator, string directory, string name){
+			Avatar avatar = AvatarBuilder.BuildGenericAvatar(gameObject,"");
+			animator.avatar = avatar;
+
+			AvatarMask avatarMask = new AvatarMask();
+
+			Type maskUtilType = typeof(UnityEditor.Editor).Assembly.GetType("AvatarMaskUtility");
+			foreach(Type t in typeof(UnityEditor.Editor).Assembly.GetTypes()){
+				if (t.Name.Contains("AvatarMaskUtility"))
+					maskUtilType =t;
+			}
+			MethodInfo updateMaskMethod = maskUtilType.GetMethod("UpdateTransformMask", BindingFlags.Static | BindingFlags.Public);
+			string[] transofrmPaths = getTransformPaths(gameObject, spineData);
+
+			updateMaskMethod.Invoke(null, new System.Object[]{avatarMask,transofrmPaths, null});
+			AssetDatabase.CreateAsset(avatar,directory+"/"+name+".anim.asset");
+			AssetDatabase.CreateAsset(avatarMask,directory+"/"+name+".mask.asset");
+			EditorUtility.SetDirty(avatarMask);
+			EditorUtility.SetDirty(avatar);
+		}
+
+		public static string[] getTransformPaths(GameObject go, SpineData spineData){
+			List<String> result = new List<string>();
+			 foreach(Transform t in go.GetComponentsInChildren<Transform>(true)){
+				string path = AnimationUtility.CalculateTransformPath(t,go.transform);
+				if (t.name.StartsWith(SLOT_PREFIX+" [") && t.name.EndsWith("]")){
+					string slotName = t.name.Remove(t.name.Length -1);
+					slotName = slotName.Remove(0,(SLOT_PREFIX+" [").Length );
+					Debug.Log("slotName = "+slotName);
+					if (spineData.slotPathByName.ContainsKey(slotName) && spineData.slotPathByName[slotName]==path)
+						result.Add(path);
+				}else {
+					if (spineData.bonePathByName.ContainsKey(t.name) && spineData.bonePathByName[t.name]==path) 
+						result.Add(path);					
+				}
+
+			}
+			return result.ToArray();
+		}
 
 		public static void updateImporters(SpineMultiatlas multiatlas, string directory, int pixelsPerUnit, out SpritesByName spriteByName){
 			spriteByName = new SpritesByName();
