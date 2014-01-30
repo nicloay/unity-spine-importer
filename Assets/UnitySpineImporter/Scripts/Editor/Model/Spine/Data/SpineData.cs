@@ -77,18 +77,17 @@ namespace UnitySpineImporter{
 			foreach (SpineBone bone in data.bones){
 				string path = "";
 				SpineBone b = bone;
-				do{
+				do {
 					path=b.name+"/"+path;
 					if (!string.IsNullOrEmpty( b.parent))
 						b = data.boneByName[b.parent];
 					else 
 						b = null;
 				} while (b!=null);
-				path = path.Replace("root/","");
+
 				if (path.Length >0)
 					path = path.Remove(path.Length - 1);
-				if (path == "root")
-					path = "";
+
 				data.bonePathByName.Add(bone.name, path);			
 			}
 

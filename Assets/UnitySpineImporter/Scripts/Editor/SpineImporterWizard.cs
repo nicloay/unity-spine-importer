@@ -59,7 +59,7 @@ namespace UnitySpineImporter{
 					SpineData       spineData       = SpineData      .deserializeFromFile(path);
 
 					SpineUtil.updateImporters(spineMultiAtlas, directory, pixelsPerUnit, out spriteByName);
-					GameObject rootGO = SpineUtil.buildSceleton(spineData, pixelsPerUnit, out boneGOByName, out slotByName);
+					GameObject rootGO = SpineUtil.buildSceleton(name, spineData, pixelsPerUnit, out boneGOByName, out slotByName);
 					rootGO.name = name;
 					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
 					SkinController sk = SpineUtil.addSkinController(rootGO, spineData, skins, slotByName);
