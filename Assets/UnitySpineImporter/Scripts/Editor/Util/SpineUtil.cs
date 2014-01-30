@@ -102,10 +102,12 @@ namespace UnitySpineImporter{
 					if (max > sizes[i] && max <= sizes[nextI] )
 						fitSize = sizes[nextI];
 				}
+
 				if (importer.maxTextureSize!=fitSize){
 					Debug.LogWarning("change default size to " + fitSize+ " for "+imagePath);
 					importer.maxTextureSize = fitSize;
 				}
+
 				foreach(string platform in platforms){
 					int maxTextureSize;
 					TextureImporterFormat textureFormat;
@@ -129,7 +131,6 @@ namespace UnitySpineImporter{
 				Texture2D tex = AssetDatabase.LoadAssetAtPath(imagePath, typeof(Texture2D )) as Texture2D;
 				Vector2 atlasSize = new Vector2(tex.width, tex.height);
 				TextureImporter importer = TextureImporter.GetAtPath(imagePath) as TextureImporter;
-				importer.maxTextureSize = 2048;
 				importer.spritesheet = getSpriteMetadata(spineAtlas, atlasSize);
 				importer.textureType = TextureImporterType.Sprite;
 				importer.spriteImportMode = SpriteImportMode.Multiple;
@@ -209,11 +210,11 @@ namespace UnitySpineImporter{
 			float2 = tmp;
 		}
 
-		public static GameObject buildSceleton(SpineData data, int pixelsPerUnit, out Dictionary<string,GameObject> boneGOByName, out Dictionary<string, Slot> slotByName){
+		public static GameObject buildSceleton(string name, SpineData data, int pixelsPerUnit, out Dictionary<string,GameObject> boneGOByName, out Dictionary<string, Slot> slotByName){
 			float ratio = 1.0f / (float)pixelsPerUnit;
 			boneGOByName = new Dictionary<string, GameObject>();
 			slotByName = new Dictionary<string, Slot>();
-			GameObject rootGO = null;
+			GameObject rootGO = new GameObject(name);
 			foreach(SpineBone bone in data.bones){
 				GameObject go = new GameObject(bone.name);
 				boneGOByName.Add(bone.name, go);
@@ -221,11 +222,11 @@ namespace UnitySpineImporter{
 
 			foreach(SpineBone bone in data.bones){
 				GameObject go = boneGOByName[bone.name];
-				if (bone.parent == null){
-					rootGO = go;
-					continue;
-				}
-				go.transform.parent = boneGOByName[bone.parent].transform;
+				if (bone.parent == null)
+					go.transform.parent = rootGO.transform;
+				else 
+					go.transform.parent = boneGOByName[bone.parent].transform;
+
 				Vector3    position = new Vector3((float)bone.x * ratio, (float)bone.y * ratio, 0.0f);
 				Vector3    scale    = new Vector3((float)bone.scaleX, (float)bone.scaleY, 1.0f);
 				Quaternion rotation = Quaternion.Euler(0, 0, (float)bone.rotation);
