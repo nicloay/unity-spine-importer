@@ -7,6 +7,7 @@ using System;
 using UnityEditorInternal;
 using CurveExtended;
 using LitJson;
+using System.Reflection;
 
 namespace UnitySpineImporter{
 	public class AtlasImageNotFoundException: System.Exception{
@@ -44,6 +45,39 @@ namespace UnitySpineImporter{
 				PrefabUtility.ReplacePrefab(gameObject, oldPrefab, ReplacePrefabOptions.ReplaceNameBased);
 		}
 
+		public static void builAvatarMask(GameObject gameObject, SpineData spineData, Animator animator, string directory, string name){
+			Avatar avatar = AvatarBuilder.BuildGenericAvatar(gameObject,"");
+			animator.avatar = avatar;
+			AvatarMask avatarMask = new AvatarMask();
+			string[] transofrmPaths = getTransformPaths(gameObject, spineData);
+			avatarMask.transformCount = transofrmPaths.Length;
+			for (int i=0; i< transofrmPaths.Length; i++){
+				avatarMask.SetTransformPath(i, transofrmPaths[i]);
+				avatarMask.SetTransformActive(i, true);
+			}
+			createFolderIfNoExists(directory, ANIMATION_FOLDER);
+			AssetDatabase.CreateAsset(avatar    , directory + "/" + ANIMATION_FOLDER + "/" + name + ".anim.asset");
+			AssetDatabase.CreateAsset(avatarMask, directory + "/" + ANIMATION_FOLDER + "/" + name + ".mask.asset");
+		}
+
+		public static string[] getTransformPaths(GameObject go, SpineData spineData){
+			List<String> result = new List<string>();
+			result.Add("");
+			 foreach(Transform t in go.GetComponentsInChildren<Transform>(true)){
+				string path = AnimationUtility.CalculateTransformPath(t,go.transform);
+				if (t.name.StartsWith(SLOT_PREFIX+" [") && t.name.EndsWith("]")){
+					string slotName = t.name.Remove(t.name.Length -1);
+					slotName = slotName.Remove(0,(SLOT_PREFIX+" [").Length );
+					if (spineData.slotPathByName.ContainsKey(slotName) && spineData.slotPathByName[slotName]==path)					
+						result.Add(path);
+				}else {
+					if (spineData.bonePathByName.ContainsKey(t.name) && spineData.bonePathByName[t.name]==path) 
+						result.Add(path);					
+				}
+
+			}
+			return result.ToArray();
+		}
 
 		public static void updateImporters(SpineMultiatlas multiatlas, string directory, int pixelsPerUnit, out SpritesByName spriteByName){
 			spriteByName = new SpritesByName();
@@ -324,13 +358,18 @@ namespace UnitySpineImporter{
 
 				animationClip.frameRate = 30;
 				string animationFolder = rootDirectory+"/"+ANIMATION_FOLDER;
-				if (!Directory.Exists(animationFolder))
-					Directory.CreateDirectory(animationFolder);
+				createFolderIfNoExists(rootDirectory, ANIMATION_FOLDER);
 
 				AssetDatabase.CreateAsset(animationClip, animationFolder + "/" + animationName+".anim");
 				AssetDatabase.SaveAssets();
 				AddClipToAnimatorComponent(rootGO,animationClip);
 			}
+		}
+
+		static void createFolderIfNoExists(string root, string folderName){
+			string path = root+"/"+folderName;
+			if (!Directory.Exists(path))
+				Directory.CreateDirectory(path);
 		}
 
 		public static void addSlotAnimationToClip(AnimationClip                          clip, 

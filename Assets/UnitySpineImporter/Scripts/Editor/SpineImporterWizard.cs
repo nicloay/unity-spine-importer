@@ -8,6 +8,7 @@ using System.Collections.Generic;
 namespace UnitySpineImporter{
 	public class SpineImporterWizard :ScriptableWizard {
 		public int pixelsPerUnit = 100;
+		public bool buildAvatarMask = true;
 		[HideInInspector]
 		public string path;
 
@@ -54,7 +55,9 @@ namespace UnitySpineImporter{
 					rootGO.name = name;
 					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
 					SkinController sk = SpineUtil.addSkinController(rootGO, spineData, skins, slotByName);
-					SpineUtil.addAnimator(rootGO);
+					Animator animator = SpineUtil.addAnimator(rootGO);
+					if (buildAvatarMask)
+						SpineUtil.builAvatarMask(rootGO,spineData, animator, directory, name);
 					SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot, pixelsPerUnit);
 					sk.showDefaulSlots();
 
