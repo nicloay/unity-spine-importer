@@ -48,30 +48,16 @@ namespace UnitySpineImporter{
 		public static void builAvatarMask(GameObject gameObject, SpineData spineData, Animator animator, string directory, string name){
 			Avatar avatar = AvatarBuilder.BuildGenericAvatar(gameObject,"");
 			animator.avatar = avatar;
-
 			AvatarMask avatarMask = new AvatarMask();
-
-			Type maskUtilType = typeof(UnityEditor.Editor).Assembly.GetType("AvatarMaskUtility");
-			foreach(Type t in typeof(UnityEditor.Editor).Assembly.GetTypes()){
-				if (t.Name.Contains("AvatarMaskUtility"))
-					maskUtilType =t;
-			}
-			MethodInfo updateMaskMethod = maskUtilType.GetMethod("UpdateTransformMask", BindingFlags.Static | BindingFlags.Public);
 			string[] transofrmPaths = getTransformPaths(gameObject, spineData);
-
-			//updateMaskMethod.Invoke(null, new System.Object[]{avatarMask,transofrmPaths, null});
-			avatarMask.Reset();
 			avatarMask.transformCount = transofrmPaths.Length;
 			for (int i=0; i< transofrmPaths.Length; i++){
-
 				avatarMask.SetTransformPath(i, transofrmPaths[i]);
 				avatarMask.SetTransformActive(i, true);
 			}
-
-			AssetDatabase.CreateAsset(avatar,directory+"/"+name+".anim.asset");
-			AssetDatabase.CreateAsset(avatarMask,directory+"/"+name+".mask.asset");
-			EditorUtility.SetDirty(avatarMask);
-			EditorUtility.SetDirty(avatar);
+			createFolderIfNoExists(directory, ANIMATION_FOLDER);
+			AssetDatabase.CreateAsset(avatar    , directory + "/" + ANIMATION_FOLDER + "/" + name + ".anim.asset");
+			AssetDatabase.CreateAsset(avatarMask, directory + "/" + ANIMATION_FOLDER + "/" + name + ".mask.asset");
 		}
 
 		public static string[] getTransformPaths(GameObject go, SpineData spineData){
@@ -82,7 +68,6 @@ namespace UnitySpineImporter{
 				if (t.name.StartsWith(SLOT_PREFIX+" [") && t.name.EndsWith("]")){
 					string slotName = t.name.Remove(t.name.Length -1);
 					slotName = slotName.Remove(0,(SLOT_PREFIX+" [").Length );
-					Debug.Log("slotName = "+slotName);
 					if (spineData.slotPathByName.ContainsKey(slotName) && spineData.slotPathByName[slotName]==path)					
 						result.Add(path);
 				}else {
@@ -373,13 +358,18 @@ namespace UnitySpineImporter{
 
 				animationClip.frameRate = 30;
 				string animationFolder = rootDirectory+"/"+ANIMATION_FOLDER;
-				if (!Directory.Exists(animationFolder))
-					Directory.CreateDirectory(animationFolder);
+				createFolderIfNoExists(rootDirectory, ANIMATION_FOLDER);
 
 				AssetDatabase.CreateAsset(animationClip, animationFolder + "/" + animationName+".anim");
 				AssetDatabase.SaveAssets();
 				AddClipToAnimatorComponent(rootGO,animationClip);
 			}
+		}
+
+		static void createFolderIfNoExists(string root, string folderName){
+			string path = root+"/"+folderName;
+			if (!Directory.Exists(path))
+				Directory.CreateDirectory(path);
 		}
 
 		public static void addSlotAnimationToClip(AnimationClip                          clip, 
