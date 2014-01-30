@@ -383,14 +383,15 @@ namespace UnitySpineImporter{
 		                                SpineData                      spineData, 
 		                                Dictionary<string, GameObject> boneGOByName, 
 		                                AttachmentGOByNameBySlot       attachmentGOByNameBySlot,
-		                                int pixelsPerUnit)
+		                                int pixelsPerUnit,
+		                                ModelImporterAnimationType modelImporterAnimationType)
 		{
 			float ratio = 1.0f / (float)pixelsPerUnit;
 			foreach(KeyValuePair<string,SpineAnimation> kvp in spineData.animations){
 				string animationName = kvp.Key;
 				SpineAnimation spineAnimation = kvp.Value;
 				AnimationClip animationClip = new AnimationClip();
-				AnimationUtility.SetAnimationType(animationClip, ModelImporterAnimationType.Generic);
+				AnimationUtility.SetAnimationType(animationClip, modelImporterAnimationType);
 				if (spineAnimation.bones!=null)
 					addBoneAnimationToClip(animationClip,spineAnimation.bones, spineData, boneGOByName, ratio);
 				if (spineAnimation.slots!=null)
@@ -404,8 +405,18 @@ namespace UnitySpineImporter{
 
 				AssetDatabase.CreateAsset(animationClip, animationFolder + "/" + animationName+".anim");
 				AssetDatabase.SaveAssets();
-				AddClipToAnimatorComponent(rootGO,animationClip);
+				if (modelImporterAnimationType == ModelImporterAnimationType.Generic)
+					AddClipToAnimatorComponent(rootGO,animationClip);
+				else 
+					AddClipToLegacyAnimationComponent(rootGO, animationClip);
 			}
+		}
+
+		static void AddClipToLegacyAnimationComponent(GameObject rootGO, AnimationClip animationClip){
+			Animation animation = rootGO.GetComponent<Animation>();
+			if (animation == null)
+				animation = rootGO.AddComponent<Animation>();
+			animation.AddClip(animationClip, animationClip.name);
 		}
 
 		static void createFolderIfNoExists(string root, string folderName){
