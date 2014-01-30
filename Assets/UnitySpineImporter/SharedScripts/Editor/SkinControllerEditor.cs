@@ -18,9 +18,12 @@ namespace UnitySpineImporter{
 					names.Add(skin.name);
 
 				int newId = EditorGUILayout.Popup(sk.activeSkinId, names.ToArray());
-				if (newId != sk.activeSkinId)
+				if (newId != sk.activeSkinId){
 					sk.setSkin	(newId);
+					EditorUtility.SetDirty(target);
+				}
 			}
 		}
+
 	}
 }
