@@ -433,6 +433,7 @@ namespace UnitySpineImporter{
 		{
 			foreach(KeyValuePair<string, SpineSlotAnimation> kvp in slotsAnimation){
 				string slotName = kvp.Key;
+				string defaultAttachment = spineData.slotDefaultAttachments[slotName];
 				SpineSlotAnimation slotAnimation = kvp.Value;
 				if (slotAnimation.attachment != null && slotAnimation.attachment.Count > 0){
 					Dictionary<string, AnimationCurve> curveByName = new Dictionary<string, AnimationCurve>();
@@ -446,10 +447,15 @@ namespace UnitySpineImporter{
 							enableCurve = curveByName[anim.name];
 						} else {
 							enableCurve = new AnimationCurve();
-							if ((i==0 && anim.time != 0) || i > 0){
-								enableCurve.AddKey(KeyframeUtil.GetNew(0, 0, TangentMode.Stepped));
-							}
+							float startValue = anim.name.Equals(defaultAttachment) ? 1.0f : 0.0f;
+							enableCurve.AddKey(KeyframeUtil.GetNew(0, startValue, TangentMode.Stepped));
 							curveByName.Add(anim.name, enableCurve);
+							if (i==0 && !anim.name.Equals(defaultAttachment)){
+								AnimationCurve defSlotCurve = new AnimationCurve();
+								curveByName.Add(defaultAttachment, defSlotCurve);
+								defSlotCurve.AddKey(KeyframeUtil.GetNew(0, 1, TangentMode.Stepped));
+								defSlotCurve.AddKey(KeyframeUtil.GetNew((float)anim.time, 0, TangentMode.Stepped));
+							}
 						}
 
 						enableCurve.AddKey(KeyframeUtil.GetNew((float)anim.time, 1, TangentMode.Stepped));
