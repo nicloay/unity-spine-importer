@@ -449,21 +449,30 @@ namespace UnitySpineImporter{
 							enableCurve = curveByName[anim.name];
 						} else {
 							enableCurve = new AnimationCurve();
-							float startValue = anim.name.Equals(defaultAttachment) ? 1.0f : 0.0f;
-							enableCurve.AddKey(KeyframeUtil.GetNew(0, startValue, TangentMode.Stepped));
+							if (anim.time > 0.0f)
+								enableCurve.AddKey(KeyframeUtil.GetNew(0, 0.0f, TangentMode.Stepped));							
+
 							curveByName.Add(anim.name, enableCurve);
+
 							if (i==0 && !anim.name.Equals(defaultAttachment)){
 								AnimationCurve defSlotCurve = new AnimationCurve();
 								curveByName.Add(defaultAttachment, defSlotCurve);
-								defSlotCurve.AddKey(KeyframeUtil.GetNew(0, 1, TangentMode.Stepped));
-								defSlotCurve.AddKey(KeyframeUtil.GetNew((float)anim.time, 0, TangentMode.Stepped));
+
+								if (anim.time !=0.0f){
+									defSlotCurve.AddKey(KeyframeUtil.GetNew(0, 1, TangentMode.Stepped));
+									defSlotCurve.AddKey(KeyframeUtil.GetNew((float)anim.time, 0, TangentMode.Stepped));
+								} else {
+									defSlotCurve.AddKey(KeyframeUtil.GetNew(0, 0, TangentMode.Stepped));
+								}
+
 							}
 						}
 
 						enableCurve.AddKey(KeyframeUtil.GetNew((float)anim.time, 1, TangentMode.Stepped));
 						if (i< (slotAnimation.attachment.Count - 1)){
 							SpineSlotAttachmentAnimation nextAnim = slotAnimation.attachment[i+1];
-							enableCurve.AddKey(KeyframeUtil.GetNew((float)nextAnim.time, 0, TangentMode.Stepped));
+							if (!nextAnim.name.Equals(anim.name))
+								enableCurve.AddKey(KeyframeUtil.GetNew((float)nextAnim.time, 0, TangentMode.Stepped));
 						}
 					}
 					foreach(KeyValuePair<string, AnimationCurve> kvp2 in curveByName){
