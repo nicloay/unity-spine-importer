@@ -29,6 +29,7 @@ namespace UnitySpineImporter{
 		public string defaultSkinName;
 		public string[] skinNames;
 		public string[] defaultPoseSlots;
+		public Dictionary<string,string> slotDefaultAttachments;
 
 
 
@@ -95,13 +96,16 @@ namespace UnitySpineImporter{
 			data.slotOrder =  new Dictionary<string, int>();
 
 			data.slotPathByName = new Dictionary<string, string>();
+			data.slotDefaultAttachments = new Dictionary<string, string>();
 			for (int i = 0; i < data.slots.Count; i++) {
 				string slotName = data.slots[i].name;
+				string defaultAttachment = data.slots[i].attachment;
 				data.slotOrder.Add(slotName, i);
 				string boneName = data.slots[i].bone;
 				string bonePath = data.bonePathByName[boneName];
 				string slotPath = bonePath+"/" + SpineUtil.getSlotGOName(slotName);
 				data.slotPathByName.Add(slotName, slotPath);
+				data.slotDefaultAttachments.Add(slotName, defaultAttachment);
 			}
 		}
 
