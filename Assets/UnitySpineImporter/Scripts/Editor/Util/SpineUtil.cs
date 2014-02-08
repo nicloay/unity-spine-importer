@@ -21,9 +21,10 @@ namespace UnitySpineImporter{
 	}
 
 	public class SpineUtil {
-		public static string SLOT_PREFIX="slot";
-		public static string SKIN_PREFIX="skin";
-		public static string ANIMATION_FOLDER="animation";
+		public static string SLOT_PREFIX       = "slot";
+		public static string SKIN_PREFIX       = "skin";
+		public static string ANIMATION_FOLDER  = "animation";
+		public static string SLASH_REPLACEMENT = "|";
 
 		public static Vector2 lineToVector2(string line){
 			string[] xy = null;
@@ -297,9 +298,10 @@ namespace UnitySpineImporter{
 						
 						GameObject parentGO;
 						GameObject spriteGO;
+						string fixedName = attachmenName.Replace("/",SLASH_REPLACEMENT);
 						if (isDefault){
 							parentGO = slotGO;
-							spriteGO = new GameObject(attachmenName);
+							spriteGO = new GameObject(fixedName);
 							Attachment a = new Attachment(attachmenName, AttachmentType.SINGLE_SPRITE, spriteGO);
 							slot.addAttachment(a);
 						} else {								
@@ -307,7 +309,7 @@ namespace UnitySpineImporter{
 							Attachment a;
 							slot.attachmentByName.TryGetValue(attachmenName, out a);
 							if (a == null){
-								GameObject attachmentGO = new GameObject(attachmenName);
+								GameObject attachmentGO = new GameObject(fixedName);
 								attachmentGO.transform.parent = slotGO.transform;
 								resetLocalTRS(attachmentGO);					
 								a = new Attachment(attachmenName, AttachmentType.SKINED_SPRITE, attachmentGO);
@@ -467,7 +469,8 @@ namespace UnitySpineImporter{
 					foreach(KeyValuePair<string, AnimationCurve> kvp2 in curveByName){
 						string attachmentName = kvp2.Key;
 						AnimationCurve animationCurve = kvp2.Value;
-						string attachmentPath = spineData.slotPathByName[slotName] + "/" + attachmentName;						
+						string attachmentPath = spineData.slotPathByName[slotName] + "/" + attachmentName.Replace("/",SLASH_REPLACEMENT);	
+						Debug.Log(attachmentPath);
 						clip.SetCurve(attachmentPath, typeof(GameObject),"m_IsActive", animationCurve);
 					}
 
