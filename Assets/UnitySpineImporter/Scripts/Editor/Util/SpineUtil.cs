@@ -477,8 +477,7 @@ namespace UnitySpineImporter{
 					}
 					foreach(KeyValuePair<string, AnimationCurve> kvp2 in curveByName){
 						string attachmentName = kvp2.Key;
-						AnimationCurve animationCurve = kvp2.Value;
-						string attachmentPath = spineData.slotPathByName[slotName] + "/" + attachmentName.Replace("/",SLASH_REPLACEMENT);	
+						AnimationCurve animationCurve = kvp2.Value;					
 						Debug.Log(attachmentPath);
 						clip.SetCurve(attachmentPath, typeof(GameObject),"m_IsActive", animationCurve);
 					}
