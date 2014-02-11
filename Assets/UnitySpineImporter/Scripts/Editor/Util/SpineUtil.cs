@@ -531,7 +531,7 @@ namespace UnitySpineImporter{
 					3 * t * (1 - t) * (1 - t) * p1.y +
 					3 * t * t * (1 - t) * p2.y +
 					t * t * t * p3.y;
-			return new Vector2(t,y);
+			return new Vector2(p0.x + t * (p3.x - p0.x) ,y);
 		}
 
 		// a - start point
@@ -546,45 +546,34 @@ namespace UnitySpineImporter{
 
 		//this is not working method
 		public static void setCustomTangents(AnimationCurve curve, int i, int nextI, JsonData tangentArray){
-			float diff = curve[nextI].value - curve[i].value;
-			if (diff == 0)
+			float diffValue = curve[nextI].value - curve[i].value;
+			float diffTime = curve[nextI].time - curve[i].time;
+			if (diffValue == 0)
 				return; 
+
+
+
 			float cx1 = parseFloat(tangentArray[0]);
 			float cy1 = parseFloat(tangentArray[1]);
 			float cx2 = parseFloat(tangentArray[2]);
 			float cy2 = parseFloat(tangentArray[3]);
-			Vector2 p0     = new Vector2(0  , 0         );
-			Vector2 p3     = new Vector2(1  , 1      );
-			Vector2 cOrig1 = new Vector2(cx1, cy1);
-			Vector2 cOrig2 = new Vector2(cx2, cy2);
+			Vector2 p0     = new Vector2(0  , 0);
+			Vector2 p3     = new Vector2(diffTime  , diffValue);
+			Vector2 cOrig1 = new Vector2(diffTime * cx1, diffValue * cy1);
+			Vector2 cOrig2 = new Vector2(diffTime * cx2, diffValue * cy2);
+
 			Vector2 p1 = getBezierPoint(p0, cOrig1, cOrig2, p3, 1.0f / 3.0f);
 			Vector2 p2 = getBezierPoint(p0, cOrig1, cOrig2, p3, 2.0f / 3.0f);
 
 
-			Vector2 c1,c2;
-			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
+			Vector2 c1,c2,c2orig;
+			calcControlPoints(p0,p1,p2,p3, out c1, out c2orig);
 
-			//* test method
-			bool ok = true;
-			for (float test=0.01f; test < 1.0f; test+=0.01f) {
-				
-				Vector2 t1 = getBezierPoint(p0,cOrig1,cOrig2,p3, test);
-				Vector2 t2 = getBezierPoint(p0,c1,c2,p3, test);
-				if (t1!=t2){
-					Debug.LogError("t1 = "+t1+"   t2 = "+t2);
-					ok = false;
-				}				
-			}
-			Debug.Log("ewerything is "+(ok?"ok":"bad"));
-			//*/
+			c2 = c2orig - p3;
 
-			c2 = c2 - p3;
-
-			float outTangent =  c1.y / c1.x;
-			Debug.Log(c1.x + "  " + (1.0f/3.0f));
-			float inTangent = c2.y / c2.x;
-			Debug.Log(c2.x + "  " + (2.0f/3.0f));
-			if (diff < 0){
+			float outTangent = c1.y / c1.x;
+			float inTangent  = c2.y / c2.x;
+			if (diffValue < 0){
 				inTangent  *= -1;
 				outTangent *= -1;
 			}
@@ -610,6 +599,28 @@ namespace UnitySpineImporter{
 
 			curve.MoveKey(i, 	 thisKeyframe);
 			curve.MoveKey(nextI, nextKeyframe);
+
+			//* test method
+			bool ok = true;
+			float startTime = thisKeyframe.time;
+			float lastTime = nextKeyframe.time;
+
+
+			for (float j=0; j < 25f; j++) {
+				float timeInS  = j/25;
+				Vector2 t1 = getBezierPoint(p0, cOrig1, cOrig2, p3, timeInS);
+				Vector2 t2 = getBezierPoint(p0,     c1, c2orig, p3, timeInS);
+				t1 *= diffValue;
+				t2 *= diffValue;
+				float curveValue = curve.Evaluate(startTime + diffTime / 25.0f * j);
+				if (t1.y!=t2.y || t1.y!=curveValue || t2.y!=curveValue){
+					Debug.LogError("time = "+ timeInS + "   t1 = "+t1.y+"   t2 = "+t2.y+"    curve"+curveValue);
+					ok = false;
+				}				
+			}
+			Debug.Log("ewerything is "+(ok?"ok":"bad"));
+			//*/
+
 		}
 
 
