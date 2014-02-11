@@ -674,9 +674,8 @@ namespace UnitySpineImporter{
 
 					setTangents(curveX, curveData);
 					setTangents(curveY, curveData);
-				
-					clip.SetCurve(bonePath, typeof(Transform),"localPosition.x",curveX);
-					clip.SetCurve(bonePath, typeof(Transform),"localPosition.y",curveY);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.x") ,curveX);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.y") ,curveY);
 				} 
 
 				if (boneAnimation.rotate != null && boneAnimation.rotate.Count > 0){
