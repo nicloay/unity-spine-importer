@@ -500,9 +500,7 @@ namespace UnitySpineImporter{
 						setLinearInterval(curve, i, nextI);
 					} else {
 						if (curveData[i].IsArray){
-							Debug.LogWarning("smooth curve is not supported yet Linear interpolation will be used instead");
-							//setCustomTangents(curve, i, nextI, curveData[i]);
-							setLinearInterval(curve, i, nextI);
+							setCustomTangents(curve, i, nextI, curveData[i]);
 						} else {
 							if (((string)curveData[i]).Equals("stepped")){
 								setSteppedInterval(curve, i, nextI);
@@ -525,21 +523,53 @@ namespace UnitySpineImporter{
 		}
 
 
+		// p0, p3 - start, end points
+		// p1, p2 - conrol points
+		// t - value on x [0,1]
+		public static Vector2 getBezierPoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t){
+			return        Mathf.Pow((1-t)  , 3) * p0 
+				+ 3 * t * Mathf.Pow((1 - t), 2) * p1 
+			    + 3 *     Mathf.Pow( t     , 2) * (1 -t) * p2 
+				+         Mathf.Pow( t     , 3) * p3;
+		}
+
+		// a - start point
+		// b - on t= 1/3
+		// c - on t = 2/3
+		// d - end point
+		// c1,c2 control points of bezier.
+		public static void calcControlPoints(Vector2 a, Vector2 b, Vector2 c, Vector2 d, out Vector2 c1, out Vector2 c2){
+			c1 = (-5 * a + 18 * b - 9 * c + 2 * d)/6;
+			c2 = ( 2 * a - 9 * b + 18 * c - 5 * d)/6;	
+		}
 
 		//this is not working method
 		public static void setCustomTangents(AnimationCurve curve, int i, int nextI, JsonData tangentArray){
+			Keyframe thisKeyframe = curve[i];
+			Keyframe nextKeyframe = curve[nextI];
+			float diff = nextKeyframe.value - thisKeyframe.value;
 			float cx1 = parseFloat(tangentArray[0]);
 			float cy1 = parseFloat(tangentArray[1]);
 			float cx2 = parseFloat(tangentArray[2]);
 			float cy2 = parseFloat(tangentArray[3]);
-			float time  = (float)(curve.keys[nextI].time  - curve.keys[i].time);
-			float value = (float)(curve.keys[nextI].value - curve.keys[i].value);
+			Vector2 p0 = Vector2.zero;
+			Vector2 p3 = new Vector2(1, diff);
+			Vector2 cOrig1 = new Vector2(cx1, cy1 * diff);
+			Vector2 cOrig2 = new Vector2(cx2, cy2 * diff);
+			Vector2 p1 = getBezierPoint(p0,cOrig1,cOrig2,p3, 1.0f / 3.0f);
+			Vector2 p2 = getBezierPoint(p0,cOrig1,cOrig2,p3, 2.0f / 3.0f);
 
-			Keyframe thisKeyframe = curve[i];
-			Keyframe nextKeyframe = curve[nextI];
+			Vector2 c1,c2;
+			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
+			c2 = p3 - c2;
 
-			float outTangent =  (cy1 * value)/ (cx1 * time);
-			float inTangent = ((1 - cy2) * value)/ ((1 - cx2) * time);
+
+
+			float outTangent =  c1.y / c1.x;
+			float inTangent = c2.y / c1.y;
+
+			if (nextKeyframe.value < thisKeyframe.value)
+				inTangent*=-1;
 
 			thisKeyframe.outTangent = outTangent;
 			nextKeyframe.inTangent  = inTangent;
