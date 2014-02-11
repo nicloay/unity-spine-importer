@@ -563,9 +563,22 @@ namespace UnitySpineImporter{
 
 			Vector2 c1,c2;
 			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
+
+			/* test method
+			bool ok = true;
+			for (float test=0.01f; test < 1.0f; test+=0.01f) {
+				
+				Vector2 t1 = getBezierPoint(p0,cOrig1,cOrig2,p3, test);
+				Vector2 t2 = getBezierPoint(p0,c1,c2,p3, test);
+				if (t1!=t2){
+					Debug.LogError("t1 = "+t1+"   t2 = "+t2);
+					ok = false;
+				}				
+			}
+			Debug.Log("ewerything is "+(ok?"ok":"bad"));
+			*/
+
 			c2 = p3 - c2;
-
-
 
 			float outTangent =  c1.y / c1.x;
 			float inTangent = c2.y / c1.y;
