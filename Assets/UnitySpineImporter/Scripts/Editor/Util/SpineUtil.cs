@@ -527,10 +527,10 @@ namespace UnitySpineImporter{
 		// p1, p2 - conrol points
 		// t - value on x [0,1]
 		public static Vector2 getBezierPoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t){
-			return        Mathf.Pow((1-t)  , 3) * p0 
-				+ 3 * t * Mathf.Pow((1 - t), 2) * p1 
-			    + 3 *     Mathf.Pow( t     , 2) * (1 -t) * p2 
-				+         Mathf.Pow( t     , 3) * p3;
+			return (1 - t) * (1 - t) * (1 - t) * p0 +
+					3 * t * (1 - t) * (1 - t) * p1 +
+					3 * t * t * (1 - t) * p2 +
+					t * t * t * p3;
 		}
 
 		// a - start point
@@ -545,19 +545,19 @@ namespace UnitySpineImporter{
 
 		//this is not working method
 		public static void setCustomTangents(AnimationCurve curve, int i, int nextI, JsonData tangentArray){
-			float diff = curve[i].value - curve[nextI].value;
+			float diff = curve[nextI].value - curve[i].value;
 			if (diff == 0)
 				return; 
 			float cx1 = parseFloat(tangentArray[0]);
 			float cy1 = parseFloat(tangentArray[1]);
 			float cx2 = parseFloat(tangentArray[2]);
 			float cy2 = parseFloat(tangentArray[3]);
-			Vector2 p0 = Vector2.zero;
-			Vector2 p3 = new Vector2(1, diff);
+			Vector2 p0     = new Vector2(0  , 0         );
+			Vector2 p3     = new Vector2(1  , diff      );
 			Vector2 cOrig1 = new Vector2(cx1, cy1 * diff);
 			Vector2 cOrig2 = new Vector2(cx2, cy2 * diff);
-			Vector2 p1 = getBezierPoint(p0,cOrig1,cOrig2,p3, 1.0f / 3.0f);
-			Vector2 p2 = getBezierPoint(p0,cOrig1,cOrig2,p3, 2.0f / 3.0f);
+			Vector2 p1 = getBezierPoint(p0, cOrig1, cOrig2, p3, 1.0f / 3.0f);
+			Vector2 p2 = getBezierPoint(p0, cOrig1, cOrig2, p3, 2.0f / 3.0f);
 
 			Vector2 c1,c2;
 			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
@@ -579,7 +579,7 @@ namespace UnitySpineImporter{
 			c2 = c2 - p3;
 
 			float outTangent =  c1.y / c1.x;
-			float inTangent = c2.y / c1.y;
+			float inTangent = c2.y / c2.x;
 
 			if (diff < 0){
 				inTangent  *= -1;
@@ -592,12 +592,12 @@ namespace UnitySpineImporter{
 
 			if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed)){
 				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
-				KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
 			}
+			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
 			if (KeyframeUtil.isKeyBroken(nextKeyframeBoxed)){
 				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
-				KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
 			}
+			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
 
 			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
 			Keyframe nextKeyframe = (Keyframe)nextKeyframeBoxed;
@@ -605,7 +605,6 @@ namespace UnitySpineImporter{
 			thisKeyframe.outTangent = outTangent;
 			nextKeyframe.inTangent  = inTangent;
 
-			Debug.Log("is broken = "+KeyframeUtil.isKeyBroken(thisKeyframe));
 			curve.MoveKey(i, 	 thisKeyframe);
 			curve.MoveKey(nextI, nextKeyframe);
 		}
