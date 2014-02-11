@@ -548,6 +548,8 @@ namespace UnitySpineImporter{
 			Keyframe thisKeyframe = curve[i];
 			Keyframe nextKeyframe = curve[nextI];
 			float diff = nextKeyframe.value - thisKeyframe.value;
+			if (diff == 0)
+				return; 
 			float cx1 = parseFloat(tangentArray[0]);
 			float cy1 = parseFloat(tangentArray[1]);
 			float cx2 = parseFloat(tangentArray[2]);
