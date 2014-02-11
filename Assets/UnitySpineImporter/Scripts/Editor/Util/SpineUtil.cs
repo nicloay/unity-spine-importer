@@ -582,13 +582,13 @@ namespace UnitySpineImporter{
 			object nextKeyframeBoxed = curve[nextI];
 
 
-			if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed)){
+			//if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed)){
 				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
-			}
+			//}
 			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
-			if (KeyframeUtil.isKeyBroken(nextKeyframeBoxed)){
+			//if (KeyframeUtil.isKeyBroken(nextKeyframeBoxed)){
 				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
-			}
+			//}
 			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
 
 			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
@@ -604,7 +604,7 @@ namespace UnitySpineImporter{
 			bool ok = true;
 			float startTime = thisKeyframe.time;
 			float lastTime = nextKeyframe.time;
-
+			float startValue = thisKeyframe.value;
 
 			for (float j=0; j < 25f; j++) {
 				float timeInS  = j/25;
@@ -612,9 +612,10 @@ namespace UnitySpineImporter{
 				Vector2 t2 = getBezierPoint(p0,     c1, c2orig, p3, timeInS);
 				t1 *= diffValue;
 				t2 *= diffValue;
-				float curveValue = curve.Evaluate(startTime + diffTime / 25.0f * j);
-				if (t1.y!=t2.y || t1.y!=curveValue || t2.y!=curveValue){
-					Debug.LogError("time = "+ timeInS + "   t1 = "+t1.y+"   t2 = "+t2.y+"    curve"+curveValue);
+				float curveValue = curve.Evaluate(startTime + diffTime / 25.0f * j) - startValue;
+
+				if (Mathf.Abs((Mathf.Abs(t1.y) - Mathf.Abs(t2.y))) > 0.000001f ||  Mathf.Abs(Mathf.Abs(t2.y) - Mathf.Abs(curveValue)) > 0.000001f){
+					Debug.LogError("time = "+ timeInS + "   t1 = "+t1.y.ToString("N8")+"   t2 = "+t2.y.ToString("N8")+"    curve="+curveValue.ToString("N8"));
 					ok = false;
 				}				
 			}
