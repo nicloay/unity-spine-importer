@@ -527,10 +527,11 @@ namespace UnitySpineImporter{
 		// p1, p2 - conrol points
 		// t - value on x [0,1]
 		public static Vector2 getBezierPoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t){
-			return (1 - t) * (1 - t) * (1 - t) * p0 +
-					3 * t * (1 - t) * (1 - t) * p1 +
-					3 * t * t * (1 - t) * p2 +
-					t * t * t * p3;
+			float y = (1 - t) * (1 - t) * (1 - t) * p0.y +
+					3 * t * (1 - t) * (1 - t) * p1.y +
+					3 * t * t * (1 - t) * p2.y +
+					t * t * t * p3.y;
+			return new Vector2(t,y);
 		}
 
 		// a - start point
@@ -553,16 +554,17 @@ namespace UnitySpineImporter{
 			float cx2 = parseFloat(tangentArray[2]);
 			float cy2 = parseFloat(tangentArray[3]);
 			Vector2 p0     = new Vector2(0  , 0         );
-			Vector2 p3     = new Vector2(1  , diff      );
-			Vector2 cOrig1 = new Vector2(cx1, cy1 * diff);
-			Vector2 cOrig2 = new Vector2(cx2, cy2 * diff);
+			Vector2 p3     = new Vector2(1  , 1      );
+			Vector2 cOrig1 = new Vector2(cx1, cy1);
+			Vector2 cOrig2 = new Vector2(cx2, cy2);
 			Vector2 p1 = getBezierPoint(p0, cOrig1, cOrig2, p3, 1.0f / 3.0f);
 			Vector2 p2 = getBezierPoint(p0, cOrig1, cOrig2, p3, 2.0f / 3.0f);
+
 
 			Vector2 c1,c2;
 			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
 
-			/* test method
+			//* test method
 			bool ok = true;
 			for (float test=0.01f; test < 1.0f; test+=0.01f) {
 				
@@ -574,13 +576,14 @@ namespace UnitySpineImporter{
 				}				
 			}
 			Debug.Log("ewerything is "+(ok?"ok":"bad"));
-			*/
+			//*/
 
 			c2 = c2 - p3;
 
 			float outTangent =  c1.y / c1.x;
+			Debug.Log(c1.x + "  " + (1.0f/3.0f));
 			float inTangent = c2.y / c2.x;
-
+			Debug.Log(c2.x + "  " + (2.0f/3.0f));
 			if (diff < 0){
 				inTangent  *= -1;
 				outTangent *= -1;
