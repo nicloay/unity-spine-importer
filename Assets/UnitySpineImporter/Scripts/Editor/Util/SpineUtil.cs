@@ -545,9 +545,7 @@ namespace UnitySpineImporter{
 
 		//this is not working method
 		public static void setCustomTangents(AnimationCurve curve, int i, int nextI, JsonData tangentArray){
-			Keyframe thisKeyframe = curve[i];
-			Keyframe nextKeyframe = curve[nextI];
-			float diff = nextKeyframe.value - thisKeyframe.value;
+			float diff = curve[i].value - curve[nextI].value;
 			if (diff == 0)
 				return; 
 			float cx1 = parseFloat(tangentArray[0]);
@@ -578,17 +576,36 @@ namespace UnitySpineImporter{
 			Debug.Log("ewerything is "+(ok?"ok":"bad"));
 			*/
 
-			c2 = p3 - c2;
+			c2 = c2 - p3;
 
 			float outTangent =  c1.y / c1.x;
 			float inTangent = c2.y / c1.y;
 
-			if (nextKeyframe.value < thisKeyframe.value)
-				inTangent*=-1;
+			if (diff < 0){
+				inTangent  *= -1;
+				outTangent *= -1;
+			}
+
+			object thisKeyframeBoxed = curve[i];
+			object nextKeyframeBoxed = curve[nextI];
+
+
+			if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed)){
+				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
+				KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
+			}
+			if (KeyframeUtil.isKeyBroken(nextKeyframeBoxed)){
+				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
+				KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
+			}
+
+			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
+			Keyframe nextKeyframe = (Keyframe)nextKeyframeBoxed;
 
 			thisKeyframe.outTangent = outTangent;
 			nextKeyframe.inTangent  = inTangent;
 
+			Debug.Log("is broken = "+KeyframeUtil.isKeyBroken(thisKeyframe));
 			curve.MoveKey(i, 	 thisKeyframe);
 			curve.MoveKey(nextI, nextKeyframe);
 		}
