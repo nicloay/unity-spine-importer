@@ -492,6 +492,7 @@ namespace UnitySpineImporter{
 		}
 
 		public static void setTangents(AnimationCurve curve, JsonData[] curveData){
+			bool showWarning = true;
 			for (int i = 0; i < curve.keys.Length; i++) {
 				int nextI = i + 1;
 				if (nextI < curve.keys.Length){
@@ -500,6 +501,10 @@ namespace UnitySpineImporter{
 						setLinearInterval(curve, i, nextI);
 					} else {
 						if (curveData[i].IsArray){
+							if (showWarning){
+								Debug.LogWarning("be carefull, smooth bezier animation is in beta state, check result animation manually");
+								showWarning = false;
+							}
 							setCustomTangents(curve, i, nextI, curveData[i]);
 						} else {
 							if (((string)curveData[i]).Equals("stepped")){
@@ -602,8 +607,6 @@ namespace UnitySpineImporter{
 			//* test method
 			bool ok = true;
 			float startTime = thisKeyframe.time;
-			float lastTime = nextKeyframe.time;
-			float startValue = thisKeyframe.value;
 
 			float epsilon = 0.001f;
 			for (float j=0; j < 25f; j++) {
@@ -617,7 +620,8 @@ namespace UnitySpineImporter{
 					ok = false;
 				}				
 			}
-			Debug.Log("ewerything is "+(ok?"ok":"bad"));
+			if (!ok)
+				Debug.LogWarning("something wrong with bezier points");
 			//*/
 
 		}
