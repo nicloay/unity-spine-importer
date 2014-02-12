@@ -341,7 +341,7 @@ namespace UnitySpineImporter{
 							collider.points = vertices;
 							collider.SetPath(0,vertices);
 						}else {
-							Debug.LogWarning("Attachment type not supported yiet FIX MEEE");
+							Debug.LogWarning("Attachment type " + spineAttachment.type + " is not supported yiet FIX MEEE");
 						}
 						attachmentList.Add(attachment);
 					}
@@ -582,11 +582,12 @@ namespace UnitySpineImporter{
 			object nextKeyframeBoxed = curve[nextI];
 
 
-
-			KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);		
+			if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed))
+				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);		
 			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
 
-			KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);		
+			if (!KeyframeUtil.isKeyBroken(nextKeyframeBoxed))
+				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);		
 			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
 
 			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
@@ -604,19 +605,43 @@ namespace UnitySpineImporter{
 			float lastTime = nextKeyframe.time;
 			float startValue = thisKeyframe.value;
 
+			float epsilon = 0.001f;
 			for (float j=0; j < 25f; j++) {
-				float timeInS  = j/25;
-				Vector2 t1 = getBezierPoint(p0, cOrig1, cOrig2, p3, timeInS);
-				Vector2 t2 = getBezierPoint(p0, c1, c2, p3, timeInS);
-				float curveValue = curve.Evaluate(startTime + diffTime / 25.0f * j);
-				if (Mathf.Abs((Mathf.Abs(t1.y) - Mathf.Abs(t2.y))) > 0.000001f ||  Mathf.Abs(Mathf.Abs(t2.y) - Mathf.Abs(curveValue)) > 0.000001f){
-					Debug.LogError("time = "+ timeInS + "   t1 = "+t1.y.ToString("N8")+"   t2 = "+t2.y.ToString("N8")+"    curve="+curveValue.ToString("N8"));
+				float t  = j/25.0f;
+				Vector2 t1 = getBezierPoint(p0, cOrig1, cOrig2, p3, t);
+				Vector2 t2 = getBezierPoint(p0, c1, c2, p3, t);
+				float curveValue = curve.Evaluate(startTime + diffTime * t);
+				if (!NearlyEqual(t1.y, t2.y, epsilon) 
+				    || !NearlyEqual(t2.y, curveValue, epsilon)){
+					Debug.LogError("time = "+ t + "   t1 = ["+t1.y.ToString("N8")+"]   t2 = ["+t2.y.ToString("N8")+"]    curve = ["+curveValue.ToString("N8")+"]");
 					ok = false;
 				}				
 			}
 			Debug.Log("ewerything is "+(ok?"ok":"bad"));
 			//*/
 
+		}
+
+		public static bool NearlyEqual(float a, float b, float epsilon)
+		{
+			float absA = Math.Abs(a);
+			float absB = Math.Abs(b);
+			float diff = Math.Abs(a - b);
+			
+			if (a == b)
+			{ // shortcut, handles infinities
+				return true;
+			} 
+			else if (a == 0 || b == 0 || diff < Double.MinValue) 
+			{
+				// a or b is zero or both are extremely close to it
+				// relative error is less meaningful here
+				return diff < (epsilon * Double.MinValue);
+			}
+			else
+			{ // use relative error
+				return diff / (absA + absB) < epsilon;
+			}
 		}
 
 
