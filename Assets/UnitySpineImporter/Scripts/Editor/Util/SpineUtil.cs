@@ -386,14 +386,28 @@ namespace UnitySpineImporter{
 		                                SpineData                      spineData, 
 		                                Dictionary<string, GameObject> boneGOByName, 
 		                                AttachmentGOByNameBySlot       attachmentGOByNameBySlot,
-		                                int pixelsPerUnit,
-		                                ModelImporterAnimationType modelImporterAnimationType)
+		                                int                            pixelsPerUnit,
+		                                ModelImporterAnimationType     modelImporterAnimationType,
+		                                bool                           updateResources)
 		{
 			float ratio = 1.0f / (float)pixelsPerUnit;
 			foreach(KeyValuePair<string,SpineAnimation> kvp in spineData.animations){
 				string animationName = kvp.Key;
+				string animationFolder  = rootDirectory+"/"+ANIMATION_FOLDER;
+				string assetPath        = animationFolder + "/" + animationName+".anim";
+
 				SpineAnimation spineAnimation = kvp.Value;
 				AnimationClip animationClip = new AnimationClip();
+				bool updateCurve = false;
+				if (File.Exists(assetPath)){
+					AnimationClip oldClip = AssetDatabase.LoadAssetAtPath(assetPath, typeof(AnimationClip)) as AnimationClip;
+					if (oldClip != null){
+						animationClip = oldClip;
+						animationClip.ClearCurves();
+						updateCurve = true;
+					}
+				}
+
 				AnimationUtility.SetAnimationType(animationClip, modelImporterAnimationType);
 				if (spineAnimation.bones!=null)
 					addBoneAnimationToClip(animationClip,spineAnimation.bones, spineData, boneGOByName, ratio);
@@ -402,16 +416,22 @@ namespace UnitySpineImporter{
 				if (spineAnimation.draworder!=null)
 					Debug.LogWarning("draworder animation implemented yet");
 
-				animationClip.frameRate = 30;
-				string animationFolder = rootDirectory+"/"+ANIMATION_FOLDER;
-				createFolderIfNoExists(rootDirectory, ANIMATION_FOLDER);
 
-				AssetDatabase.CreateAsset(animationClip, animationFolder + "/" + animationName+".anim");
-				AssetDatabase.SaveAssets();
-				if (modelImporterAnimationType == ModelImporterAnimationType.Generic)
-					AddClipToAnimatorComponent(rootGO,animationClip);
-				else 
-					AddClipToLegacyAnimationComponent(rootGO, animationClip);
+				if (updateCurve){
+					EditorUtility.SetDirty(animationClip);
+					AssetDatabase.SaveAssets();
+				} else {
+					animationClip.frameRate = 30;
+					createFolderIfNoExists(rootDirectory, ANIMATION_FOLDER);
+					AssetDatabase.CreateAsset(animationClip, assetPath);
+					AssetDatabase.SaveAssets();
+
+					if (modelImporterAnimationType == ModelImporterAnimationType.Generic)
+						AddClipToAnimatorComponent(rootGO,animationClip);
+					else 
+						AddClipToLegacyAnimationComponent(rootGO, animationClip);
+				}
+
 			}
 		}
 
@@ -479,7 +499,6 @@ namespace UnitySpineImporter{
 						string attachmentName = kvp2.Key;
 						AnimationCurve animationCurve = kvp2.Value;
 						string attachmentPath = spineData.slotPathByName[slotName] + "/" + attachmentName.Replace("/",SLASH_REPLACEMENT);	
-						Debug.Log(attachmentPath);
 						clip.SetCurve(attachmentPath, typeof(GameObject),"m_IsActive", animationCurve);
 					}
 
