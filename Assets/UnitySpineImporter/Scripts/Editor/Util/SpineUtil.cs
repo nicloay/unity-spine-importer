@@ -341,7 +341,7 @@ namespace UnitySpineImporter{
 							collider.points = vertices;
 							collider.SetPath(0,vertices);
 						}else {
-							Debug.LogWarning("Attachment type not supported yiet FIX MEEE");
+							Debug.LogWarning("Attachment type " + spineAttachment.type + " is not supported yiet FIX MEEE");
 						}
 						attachmentList.Add(attachment);
 					}
@@ -492,6 +492,7 @@ namespace UnitySpineImporter{
 		}
 
 		public static void setTangents(AnimationCurve curve, JsonData[] curveData){
+			bool showWarning = true;
 			for (int i = 0; i < curve.keys.Length; i++) {
 				int nextI = i + 1;
 				if (nextI < curve.keys.Length){
@@ -500,9 +501,11 @@ namespace UnitySpineImporter{
 						setLinearInterval(curve, i, nextI);
 					} else {
 						if (curveData[i].IsArray){
-							Debug.LogWarning("smooth curve is not supported yet Linear interpolation will be used instead");
-							//setCustomTangents(curve, i, nextI, curveData[i]);
-							setLinearInterval(curve, i, nextI);
+							if (showWarning){
+								Debug.LogWarning("be carefull, smooth bezier animation is in beta state, check result animation manually");
+								showWarning = false;
+							}
+							setCustomTangents(curve, i, nextI, curveData[i]);
 						} else {
 							if (((string)curveData[i]).Equals("stepped")){
 								setSteppedInterval(curve, i, nextI);
@@ -525,27 +528,124 @@ namespace UnitySpineImporter{
 		}
 
 
+		// p0, p3 - start, end points
+		// p1, p2 - conrol points
+		// t - value on x [0,1]
+		public static Vector2 getBezierPoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t){
+			float y = (1 - t) * (1 - t) * (1 - t) * p0.y +
+					3 * t * (1 - t) * (1 - t) * p1.y +
+					3 * t * t * (1 - t) * p2.y +
+					t * t * t * p3.y;
+			return new Vector2(p0.x + t * (p3.x - p0.x) ,y);
+		}
 
-		//this is not working method
+		// a - start point
+		// b - on t= 1/3
+		// c - on t = 2/3
+		// d - end point
+		// c1,c2 control points of bezier.
+		public static void calcControlPoints(Vector2 a, Vector2 b, Vector2 c, Vector2 d, out Vector2 c1, out Vector2 c2){
+			c1 = (-5 * a + 18 * b - 9 * c + 2 * d)/6;
+			c2 = ( 2 * a - 9 * b + 18 * c - 5 * d)/6;	
+		}
+
 		public static void setCustomTangents(AnimationCurve curve, int i, int nextI, JsonData tangentArray){
+			float diffValue = curve[nextI].value - curve[i].value;
+			float diffTime = curve[nextI].time - curve[i].time;
+			if (diffValue == 0)
+				return; 
+
+
+
 			float cx1 = parseFloat(tangentArray[0]);
 			float cy1 = parseFloat(tangentArray[1]);
 			float cx2 = parseFloat(tangentArray[2]);
 			float cy2 = parseFloat(tangentArray[3]);
-			float time  = (float)(curve.keys[nextI].time  - curve.keys[i].time);
-			float value = (float)(curve.keys[nextI].value - curve.keys[i].value);
+			Vector2 p0     = new Vector2(0  , curve[i].value);
+			Vector2 p3     = new Vector2(diffTime  , curve[nextI].value);
+			Vector2 cOrig1 = new Vector2(diffTime * cx1, curve[i].value);
+			cOrig1.y += diffValue > 0 ? diffValue * cy1 : -1.0f * Mathf.Abs(diffValue * cy1);
 
-			Keyframe thisKeyframe = curve[i];
-			Keyframe nextKeyframe = curve[nextI];
+			Vector2 cOrig2 = new Vector2(diffTime * cx2, curve[i].value);
+			cOrig2.y += diffValue > 0 ? diffValue * cy2 : -1.0f * Mathf.Abs(diffValue * cy2);
 
-			float outTangent =  (cy1 * value)/ (cx1 * time);
-			float inTangent = ((1 - cy2) * value)/ ((1 - cx2) * time);
+			Vector2 p1 = getBezierPoint(p0, cOrig1, cOrig2, p3, 1.0f / 3.0f);
+			Vector2 p2 = getBezierPoint(p0, cOrig1, cOrig2, p3, 2.0f / 3.0f);
+
+
+			Vector2 c1tg, c2tg, c1, c2;
+			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
+
+			c1tg = c1 - p0;
+			c2tg = c2 - p3;
+
+			float outTangent = c1tg.y / c1tg.x;
+			float inTangent  = c2tg.y / c2tg.x;
+
+
+			object thisKeyframeBoxed = curve[i];
+			object nextKeyframeBoxed = curve[nextI];
+
+
+			if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed))
+				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);		
+			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
+
+			if (!KeyframeUtil.isKeyBroken(nextKeyframeBoxed))
+				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);		
+			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
+
+			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
+			Keyframe nextKeyframe = (Keyframe)nextKeyframeBoxed;
 
 			thisKeyframe.outTangent = outTangent;
 			nextKeyframe.inTangent  = inTangent;
 
 			curve.MoveKey(i, 	 thisKeyframe);
 			curve.MoveKey(nextI, nextKeyframe);
+
+			//* test method
+			bool ok = true;
+			float startTime = thisKeyframe.time;
+
+			float epsilon = 0.001f;
+			for (float j=0; j < 25f; j++) {
+				float t  = j/25.0f;
+				Vector2 t1 = getBezierPoint(p0, cOrig1, cOrig2, p3, t);
+				Vector2 t2 = getBezierPoint(p0, c1, c2, p3, t);
+				float curveValue = curve.Evaluate(startTime + diffTime * t);
+				if (!NearlyEqual(t1.y, t2.y, epsilon) 
+				    || !NearlyEqual(t2.y, curveValue, epsilon)){
+					Debug.LogError("time = "+ t + "   t1 = ["+t1.y.ToString("N8")+"]   t2 = ["+t2.y.ToString("N8")+"]    curve = ["+curveValue.ToString("N8")+"]");
+					ok = false;
+				}				
+			}
+			if (!ok)
+				Debug.LogWarning("something wrong with bezier points");
+			//*/
+
+		}
+
+		public static bool NearlyEqual(float a, float b, float epsilon)
+		{
+			float absA = Math.Abs(a);
+			float absB = Math.Abs(b);
+			float diff = Math.Abs(a - b);
+			
+			if (a == b)
+			{ // shortcut, handles infinities
+				return true;
+			} 
+			else if (a == 0 || b == 0 || diff < Double.MinValue) 
+			{
+				// a or b is zero or both are extremely close to it
+				// relative error is less meaningful here
+				return diff < (epsilon * Double.MinValue);
+			}
+			else
+			{ // use relative error
+				return diff / (absA + absB) < epsilon;
+			}
 		}
 
 
@@ -612,9 +712,8 @@ namespace UnitySpineImporter{
 
 					setTangents(curveX, curveData);
 					setTangents(curveY, curveData);
-				
-					clip.SetCurve(bonePath, typeof(Transform),"localPosition.x",curveX);
-					clip.SetCurve(bonePath, typeof(Transform),"localPosition.y",curveY);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.x") ,curveX);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.y") ,curveY);
 				} 
 
 				if (boneAnimation.rotate != null && boneAnimation.rotate.Count > 0){
