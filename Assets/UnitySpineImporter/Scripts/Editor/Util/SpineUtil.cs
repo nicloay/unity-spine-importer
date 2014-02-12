@@ -544,7 +544,6 @@ namespace UnitySpineImporter{
 			c2 = ( 2 * a - 9 * b + 18 * c - 5 * d)/6;	
 		}
 
-		//this is not working method
 		public static void setCustomTangents(AnimationCurve curve, int i, int nextI, JsonData tangentArray){
 			float diffValue = curve[nextI].value - curve[i].value;
 			float diffTime = curve[nextI].time - curve[i].time;
@@ -557,38 +556,37 @@ namespace UnitySpineImporter{
 			float cy1 = parseFloat(tangentArray[1]);
 			float cx2 = parseFloat(tangentArray[2]);
 			float cy2 = parseFloat(tangentArray[3]);
-			Vector2 p0     = new Vector2(0  , 0);
-			Vector2 p3     = new Vector2(diffTime  , diffValue);
-			Vector2 cOrig1 = new Vector2(diffTime * cx1, diffValue * cy1);
-			Vector2 cOrig2 = new Vector2(diffTime * cx2, diffValue * cy2);
+			Vector2 p0     = new Vector2(0  , curve[i].value);
+			Vector2 p3     = new Vector2(diffTime  , curve[nextI].value);
+			Vector2 cOrig1 = new Vector2(diffTime * cx1, curve[i].value);
+			cOrig1.y += diffValue > 0 ? diffValue * cy1 : -1.0f * Mathf.Abs(diffValue * cy1);
+
+			Vector2 cOrig2 = new Vector2(diffTime * cx2, curve[i].value);
+			cOrig2.y += diffValue > 0 ? diffValue * cy2 : -1.0f * Mathf.Abs(diffValue * cy2);
 
 			Vector2 p1 = getBezierPoint(p0, cOrig1, cOrig2, p3, 1.0f / 3.0f);
 			Vector2 p2 = getBezierPoint(p0, cOrig1, cOrig2, p3, 2.0f / 3.0f);
 
 
-			Vector2 c1,c2,c2orig;
-			calcControlPoints(p0,p1,p2,p3, out c1, out c2orig);
+			Vector2 c1tg, c2tg, c1, c2;
+			calcControlPoints(p0,p1,p2,p3, out c1, out c2);
 
-			c2 = c2orig - p3;
+			c1tg = c1 - p0;
+			c2tg = c2 - p3;
 
-			float outTangent = c1.y / c1.x;
-			float inTangent  = c2.y / c2.x;
-			if (diffValue < 0){
-				inTangent  *= -1;
-				outTangent *= -1;
-			}
+			float outTangent = c1tg.y / c1tg.x;
+			float inTangent  = c2tg.y / c2tg.x;
+
 
 			object thisKeyframeBoxed = curve[i];
 			object nextKeyframeBoxed = curve[nextI];
 
 
-			//if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed)){
-				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
-			//}
+
+			KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);		
 			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Editable);
-			//if (KeyframeUtil.isKeyBroken(nextKeyframeBoxed)){
-				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
-			//}
+
+			KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);		
 			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Editable);
 
 			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
@@ -609,11 +607,8 @@ namespace UnitySpineImporter{
 			for (float j=0; j < 25f; j++) {
 				float timeInS  = j/25;
 				Vector2 t1 = getBezierPoint(p0, cOrig1, cOrig2, p3, timeInS);
-				Vector2 t2 = getBezierPoint(p0,     c1, c2orig, p3, timeInS);
-				t1 *= diffValue;
-				t2 *= diffValue;
-				float curveValue = curve.Evaluate(startTime + diffTime / 25.0f * j) - startValue;
-
+				Vector2 t2 = getBezierPoint(p0, c1, c2, p3, timeInS);
+				float curveValue = curve.Evaluate(startTime + diffTime / 25.0f * j);
 				if (Mathf.Abs((Mathf.Abs(t1.y) - Mathf.Abs(t2.y))) > 0.000001f ||  Mathf.Abs(Mathf.Abs(t2.y) - Mathf.Abs(curveValue)) > 0.000001f){
 					Debug.LogError("time = "+ timeInS + "   t1 = "+t1.y.ToString("N8")+"   t2 = "+t2.y.ToString("N8")+"    curve="+curveValue.ToString("N8"));
 					ok = false;
