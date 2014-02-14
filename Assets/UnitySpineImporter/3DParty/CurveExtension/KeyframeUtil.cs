@@ -4,6 +4,7 @@ using System.Reflection;
 using System;
 
 namespace CurveExtended{
+	[Flags]
 	public enum TangentMode
 	{
 		Editable = 0,
