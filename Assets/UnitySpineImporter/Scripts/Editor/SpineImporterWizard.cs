@@ -15,6 +15,7 @@ namespace UnitySpineImporter{
 		public int pixelsPerUnit = 100;
 		public bool buildAvatarMask = true;
 		public AnimationImportType animationImportType = AnimationImportType.MECANIM;
+		public bool updateResources = true;
 		[HideInInspector]
 		public string path;
 
@@ -33,7 +34,8 @@ namespace UnitySpineImporter{
 
 		void OnWizardUpdate() {
 			helpString = "Be carefull, don't use small amout of pixels per unit (e.g. 1 or 10) \n" +
-				"if you are going to use result model with unity 2d physics and gravity";
+				"if you are going to use result model with unity 2d physics and gravity\n" +
+				"update resources means - instead of create new animator and new animations update them";
 			if (pixelsPerUnit <=0)
 				errorString = "PixelsPerUnit must be greater than zero";
 			else 
@@ -70,11 +72,10 @@ namespace UnitySpineImporter{
 					}
 
 					ModelImporterAnimationType modelImporterAnimationType = getModelImporterAnimationType();
-					SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot, pixelsPerUnit, modelImporterAnimationType);
+					SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot,
+					                       pixelsPerUnit, modelImporterAnimationType, updateResources);
 					sk.showDefaulSlots();
-
 					SpineUtil.buildPrefab(rootGO, directory, name);
-
 					GameObject.DestroyImmediate(rootGO);
 
 				} catch (SpineMultiatlasCreationException e){ 

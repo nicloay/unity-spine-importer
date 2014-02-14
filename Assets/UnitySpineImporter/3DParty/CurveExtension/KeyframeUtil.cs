@@ -4,6 +4,7 @@ using System.Reflection;
 using System;
 
 namespace CurveExtended{
+	[Flags]
 	public enum TangentMode
 	{
 		Editable = 0,
@@ -101,6 +102,14 @@ namespace CurveExtended{
 			else
 				tangentMode &= -2;
 			field.SetValue(keyframe, tangentMode);
+		}
+
+		// UnityEditor.CurveUtility.cs (c) Unity Technologies
+		public static bool isKeyBroken(object keyframe){
+			Type t = typeof( UnityEngine.Keyframe );
+			FieldInfo field = t.GetField( "m_TangentMode", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
+			int tangentMode =  (int)field.GetValue(keyframe);
+			return (tangentMode & 1) != 0;
 		}
 		
 	}
