@@ -671,15 +671,16 @@ namespace UnitySpineImporter{
 		public static void setSteppedInterval(AnimationCurve curve, int i, int nextI){
 
 			if (curve.keys[i].value == curve.keys[nextI].value){
-				setLinearInterval(curve, i, nextI);
 				return;
 			}
 
 			object thisKeyframeBoxed = curve[i];
 			object nextKeyframeBoxed = curve[nextI];
 		
-			KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
-			KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
+			if (!KeyframeUtil.isKeyBroken(thisKeyframeBoxed))
+				KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
+			if (!KeyframeUtil.isKeyBroken(nextKeyframeBoxed))
+				KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
 			
 			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Stepped);
 			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Stepped);
@@ -687,31 +688,32 @@ namespace UnitySpineImporter{
 			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
 			Keyframe nextKeyframe = (Keyframe)nextKeyframeBoxed;
 			thisKeyframe.outTangent = float.PositiveInfinity;
+			nextKeyframe.inTangent  = float.PositiveInfinity;
 			curve.MoveKey(i, 	 thisKeyframe);
 			curve.MoveKey(nextI, nextKeyframe);
 		}
 
 
 		public static void setLinearInterval(AnimationCurve curve, int i, int nextI){
-			object thisKeyframeBoxed = curve[i];
-			object nextKeyframeBoxed = curve[nextI];
-			KeyframeUtil.SetKeyBroken(thisKeyframeBoxed, true);
-			KeyframeUtil.SetKeyBroken(nextKeyframeBoxed, true);
-
-			KeyframeUtil.SetKeyTangentMode(thisKeyframeBoxed, 1, TangentMode.Linear);
-			KeyframeUtil.SetKeyTangentMode(nextKeyframeBoxed, 0, TangentMode.Linear);
-
-			Keyframe thisKeyframe = (Keyframe)thisKeyframeBoxed;
-			Keyframe nextKeyframe = (Keyframe)nextKeyframeBoxed;
-
+			Keyframe thisKeyframe = curve[i];
+			Keyframe nextKeyframe = curve[nextI];
 			thisKeyframe.outTangent = CurveExtension.CalculateLinearTangent(curve, i, nextI);
 			nextKeyframe.inTangent = CurveExtension.CalculateLinearTangent(curve, nextI, i);
+
+			KeyframeUtil.SetKeyBroken((object)thisKeyframe, true);
+			KeyframeUtil.SetKeyBroken((object)nextKeyframe, true);
+
+			KeyframeUtil.SetKeyTangentMode((object)thisKeyframe, 1, TangentMode.Linear);
+			KeyframeUtil.SetKeyTangentMode((object)nextKeyframe, 0, TangentMode.Linear);
+
+
 			curve.MoveKey(i, 	 thisKeyframe);
 			curve.MoveKey(nextI, nextKeyframe);
 		}
 
 
-		public static void addBoneAnimationToClip(AnimationClip clip, Dictionary<string, SpineBoneAnimation> bonesAnimation, SpineData spineData, Dictionary<string, GameObject> boneGOByName, float ratio){
+		public static void addBoneAnimationToClip(AnimationClip clip, Dictionary<string, SpineBoneAnimation> bonesAnimation,
+		                                          SpineData spineData, Dictionary<string, GameObject> boneGOByName, float ratio){
 			foreach(KeyValuePair<string,SpineBoneAnimation> kvp in bonesAnimation){
 				string boneName = kvp.Key;
 				GameObject boneGO = boneGOByName[boneName];
@@ -731,15 +733,16 @@ namespace UnitySpineImporter{
 
 					setTangents(curveX, curveData);
 					setTangents(curveY, curveData);
-					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.x") ,curveX);
-					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.y") ,curveY);
+					AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.x") ,curveX);
+					AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalPosition.y") ,curveY);
+
+
 				} 
 
 				if (boneAnimation.rotate != null && boneAnimation.rotate.Count > 0){
-					AnimationCurve rotationX = new AnimationCurve();// next 4 is quaternion values
-					AnimationCurve rotationY = new AnimationCurve();
-					AnimationCurve rotationZ = new AnimationCurve();
-					AnimationCurve rotationW = new AnimationCurve();
+					AnimationCurve localRotationZ = new AnimationCurve();
+					AnimationCurve localRotationZero = new AnimationCurve();
+
 					JsonData[] curveData = new JsonData[boneAnimation.rotate.Count];
 					for (int i = 0; i < boneAnimation.rotate.Count; i++) {
 						float origAngle = (float)boneAnimation.rotate[i].angle;
@@ -750,28 +753,23 @@ namespace UnitySpineImporter{
 
 						float newZ = boneGO.transform.localRotation.eulerAngles.z + origAngle;
 
-
 						Quaternion angle = Quaternion.Euler(0,0,newZ);
 						float time = (float)boneAnimation.rotate[i].time;
 
 						curveData[i] = boneAnimation.rotate[i].curve;
 
-						rotationX.AddKey(new Keyframe(time, angle.x));
-						rotationY.AddKey(new Keyframe(time, angle.y));
-						rotationZ.AddKey(new Keyframe(time, angle.z));
-						rotationW.AddKey(new Keyframe(time, angle.w));
+						localRotationZ.AddKey(new Keyframe(time, newZ));
+						localRotationZero.AddKey(new Keyframe(time,0));
 					}
 
+					fixAngles  (localRotationZ   , curveData);
+					setTangents(localRotationZ   , curveData);
+					setTangents(localRotationZero, curveData);
 
-					setTangents(rotationX, curveData);
-					setTangents(rotationY, curveData);
-					setTangents(rotationZ, curveData);
-					setTangents(rotationW, curveData);
-
-					clip.SetCurve(bonePath, typeof(Transform),"localRotation.x", rotationX);
-					clip.SetCurve(bonePath, typeof(Transform),"localRotation.y", rotationY);
-					clip.SetCurve(bonePath, typeof(Transform),"localRotation.z", rotationZ);
-					clip.SetCurve(bonePath, typeof(Transform),"localRotation.w", rotationW);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"localEulerAnglesBaked.x"), localRotationZero);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"localEulerAnglesBaked.y"), new AnimationCurve( localRotationZero.keys));
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"localEulerAnglesBaked.z"), localRotationZ);
+					//AnimationUtility.SetEditorCurve(clip,bonePath,typeof(Transform),"localEulerAngles.z",localRotationZ);
 				} 
 
 				if (boneAnimation.scale != null && boneAnimation.scale.Count > 0){
@@ -796,6 +794,32 @@ namespace UnitySpineImporter{
 			}
 		}
 
+
+		static void fixAngles(AnimationCurve curve, JsonData[] curveData){
+			if (curve.keys.Length <3)
+				return;
+			int fullTurn = 0;
+			bool forward = true;
+			float currValue, previousValue, diff;
+			for (int previousI=0, i = 1; i < curve.keys.Length; previousI= i++) {
+				if (curveData[previousI] != null &&  curveData[previousI].IsString &&  ((string)curveData[previousI]).Equals("stepped"))
+					continue;
+
+				currValue = curve.keys[i].value;
+				previousValue = curve.keys[previousI].value;
+
+				while ((currValue - previousValue) > 180 ){
+					currValue -= 360;
+				}
+
+				while ((currValue - previousValue) < -180){
+					currValue += 360;
+				}
+				if (curve.keys[i].value != currValue){
+					curve.MoveKey(i, new Keyframe(curve.keys[i].time , currValue));
+				}
+			}
+		}
 
 
 		public static AnimationClip AddClipToAnimatorComponent(GameObject animatedObject, AnimationClip newClip)
