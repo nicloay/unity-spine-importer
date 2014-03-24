@@ -745,8 +745,10 @@ namespace UnitySpineImporter{
 				} 
 
 				if (boneAnimation.rotate != null && boneAnimation.rotate.Count > 0){
+					AnimationCurve localRotationX = new AnimationCurve();
+					AnimationCurve localRotationY = new AnimationCurve();
 					AnimationCurve localRotationZ = new AnimationCurve();
-					AnimationCurve localRotationZero = new AnimationCurve();
+					AnimationCurve localRotationW = new AnimationCurve();
 
 					JsonData[] curveData = new JsonData[boneAnimation.rotate.Count];
 					for (int i = 0; i < boneAnimation.rotate.Count; i++) {
@@ -763,18 +765,30 @@ namespace UnitySpineImporter{
 
 						curveData[i] = boneAnimation.rotate[i].curve;
 
-						localRotationZ.AddKey(new Keyframe(time, newZ));
-						localRotationZero.AddKey(new Keyframe(time,0));
+						localRotationX.AddKey(new Keyframe(time, angle.x));
+						localRotationY.AddKey(new Keyframe(time, angle.y));
+						localRotationZ.AddKey(new Keyframe(time, angle.z));
+						localRotationW.AddKey(new Keyframe(time, angle.w));
+
 					}
+
+					fixAngles  (localRotationX   , curveData);
+					setTangents(localRotationX   , curveData);
+
+					fixAngles  (localRotationY   , curveData);
+					setTangents(localRotationY   , curveData);
 
 					fixAngles  (localRotationZ   , curveData);
 					setTangents(localRotationZ   , curveData);
-					setTangents(localRotationZero, curveData);
 
-					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"localEulerAnglesBaked.x"), localRotationZero);
-					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"localEulerAnglesBaked.y"), new AnimationCurve( localRotationZero.keys));
-					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"localEulerAnglesBaked.z"), localRotationZ);
-					//AnimationUtility.SetEditorCurve(clip,bonePath,typeof(Transform),"localEulerAngles.z",localRotationZ);
+					fixAngles  (localRotationW   , curveData);
+					setTangents(localRotationW   , curveData);
+
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.x"), localRotationX);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.y"), localRotationY);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.z"), localRotationZ);
+					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.w"), localRotationW);
+
 				} 
 
 				if (boneAnimation.scale != null && boneAnimation.scale.Count > 0){
