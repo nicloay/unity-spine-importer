@@ -42,8 +42,14 @@ namespace UnitySpineImporter{
 			UnityEngine.Object oldPrefab = AssetDatabase.LoadAssetAtPath( prefabPath, typeof(GameObject));
 			if (oldPrefab == null)
 				PrefabUtility.CreatePrefab(prefabPath, gameObject, ReplacePrefabOptions.ConnectToPrefab);
-			else 
+			else {
+				UnityEngine.Object instance = PrefabUtility.InstantiatePrefab(oldPrefab);
+				instance.name = instance.name+"_copy";
+				PrefabUtility.DisconnectPrefabInstance(instance);
 				PrefabUtility.ReplacePrefab(gameObject, oldPrefab, ReplacePrefabOptions.ReplaceNameBased);
+				PrefabUtility.ReplacePrefab(instance as GameObject, oldPrefab, ReplacePrefabOptions.ConnectToPrefab);
+				GameObject.DestroyImmediate(instance);
+			}
 		}
 
 		public static void builAvatarMask(GameObject gameObject, SpineData spineData, Animator animator, string directory, string name){
