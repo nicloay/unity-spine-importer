@@ -16,6 +16,7 @@ namespace UnitySpineImporter{
 		public bool buildAvatarMask = true;
 		public AnimationImportType animationImportType = AnimationImportType.MECANIM;
 		public bool updateResources = true;
+		public float zStep = 0.01f;
 		[HideInInspector]
 		public string path;
 
@@ -63,7 +64,7 @@ namespace UnitySpineImporter{
 					SpineUtil.updateImporters(spineMultiAtlas, directory, pixelsPerUnit, out spriteByName);
 					GameObject rootGO = SpineUtil.buildSceleton(name, spineData, pixelsPerUnit, out boneGOByName, out slotByName);
 					rootGO.name = name;
-					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
+					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, zStep, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
 					SkinController sk = SpineUtil.addSkinController(rootGO, spineData, skins, slotByName);
 					if (animationImportType == AnimationImportType.MECANIM){
 						Animator animator = SpineUtil.addAnimator(rootGO);

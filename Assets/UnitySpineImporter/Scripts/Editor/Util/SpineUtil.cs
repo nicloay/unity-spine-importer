@@ -261,7 +261,7 @@ namespace UnitySpineImporter{
 			go.transform.localScale = Vector3.one;
 		}
 
-		public static void addAllAttahcmentsSlots(SpineData spineData, SpritesByName spriteByName, Dictionary<string, Slot> slotByName, int pixelsPerUnit, out List<Skin> skins, out AttachmentGOByNameBySlot attachmentGOByNameBySlot){
+		public static void addAllAttahcmentsSlots(SpineData spineData, SpritesByName spriteByName, Dictionary<string, Slot> slotByName, float zStep, int pixelsPerUnit, out List<Skin> skins, out AttachmentGOByNameBySlot attachmentGOByNameBySlot){
 			float ratio = 1.0f / (float) pixelsPerUnit;
 			skins = new List<Skin>();
 			attachmentGOByNameBySlot= new AttachmentGOByNameBySlot();
@@ -325,8 +325,7 @@ namespace UnitySpineImporter{
 						if (spineAttachment.type.Equals("region")){
 							SpriteRenderer sr = spriteGO.AddComponent<SpriteRenderer>();
 							sr.sprite = sprite;
-							sr.sortingOrder = drawOrder;
-							spriteGO.transform.localPosition = getAttachmentPosition(spineAttachment, ratio);
+							spriteGO.transform.localPosition = getAttachmentPosition(spineAttachment, ratio,-( drawOrder * zStep));
 							spriteGO.transform.localRotation = getAttachmentRotation(spineAttachment, spriteByName.rotatedSprites.Contains(sprite));
 							spriteGO.transform.localScale    = getAttachmentScale(spineAttachment);
 						} else  if (spineAttachment.type.Equals("boundingbox")) {
@@ -854,8 +853,8 @@ namespace UnitySpineImporter{
 				return Quaternion.Euler(0.0f, 0.0f, (float)spineSkinAttachment.rotation);
 		}
 
-		public static Vector3 getAttachmentPosition(SpineSkinAttachment spineSkinAttachment, float ratio){
-			return new Vector3((float)spineSkinAttachment.x * ratio, (float)spineSkinAttachment.y * ratio, 0.0f);
+		public static Vector3 getAttachmentPosition(SpineSkinAttachment spineSkinAttachment, float ratio, float z){
+			return new Vector3((float)spineSkinAttachment.x * ratio, (float)spineSkinAttachment.y * ratio, z);
 		}
 
 		public static Vector3 getAttachmentScale(SpineSkinAttachment spineSkinAttachment){
