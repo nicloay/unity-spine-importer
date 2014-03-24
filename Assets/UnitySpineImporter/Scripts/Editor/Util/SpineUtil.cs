@@ -794,13 +794,16 @@ namespace UnitySpineImporter{
 				if (boneAnimation.scale != null && boneAnimation.scale.Count > 0){
 					AnimationCurve scaleX = new AnimationCurve();
 					AnimationCurve scaleY = new AnimationCurve();
+					AnimationCurve scaleZ = new AnimationCurve();
 					JsonData[] curveData = new JsonData[boneAnimation.scale.Count];
 					for (int i = 0; i < boneAnimation.scale.Count; i++) {
 						Keyframe keyFrameX = new Keyframe((float)boneAnimation.scale[i].time, boneGO.transform.localScale.x * (float)boneAnimation.scale[i].x);
 						Keyframe keyFrameY = new Keyframe((float)boneAnimation.scale[i].time, boneGO.transform.localScale.y * (float)boneAnimation.scale[i].y);
+						Keyframe keyFrameZ = new Keyframe((float)boneAnimation.scale[i].time, 1);
 						curveData[i] = boneAnimation.scale[i].curve;
 						scaleX.AddKey(keyFrameX);
 						scaleY.AddKey(keyFrameY);					
+						scaleZ.AddKey(keyFrameZ);
 					}
 
 					setTangents(scaleX,curveData);
@@ -808,6 +811,7 @@ namespace UnitySpineImporter{
 
 					clip.SetCurve(bonePath, typeof(Transform),"localScale.x",scaleX);
 					clip.SetCurve(bonePath, typeof(Transform),"localScale.y",scaleY);
+					clip.SetCurve(bonePath, typeof(Transform),"localScale.z",scaleZ);
 				} 
 
 			}
