@@ -19,6 +19,7 @@ namespace UnitySpineImporter{
 				throw new SpineMultiatlasCreationException("provided file does not exists");
 			using(StreamReader streamReader = new StreamReader(multiatlasFilePath)){
 				string line;
+				string spriteNameAfterProps = "";
 				bool setMainProps = false;
 				SpineAtlas spineAtlas = null;
 				SpineSprite sprite    = null;
@@ -30,14 +31,30 @@ namespace UnitySpineImporter{
 							spineAtlas  = new SpineAtlas();
 							multiAtlas.Add(spineAtlas);
 							spineAtlas.imageName = line;
-							spineAtlas.format = streamReader.ReadLine();
-							spineAtlas.filter = streamReader.ReadLine();
-							spineAtlas.repeat = streamReader.ReadLine();
+							Dictionary<string,string> keyValue = new Dictionary<string, string >();
+							string[] kvp;
+							while( (kvp= streamReader.ReadLine().Split(':')).Length == 2)
+								keyValue.Add(kvp[0].Trim(), kvp[1].Trim());
+							
+							spineAtlas.format = keyValue["format"];
+							spineAtlas.filter = keyValue["filter"];
+							spineAtlas.repeat = keyValue["repeat"];
+							
+							spriteNameAfterProps = kvp[0];
 							spineAtlas.sprites = new List<SpineSprite>();
 							setMainProps = false;
-						} else {
+							
+						} 
+						
+						if (!setMainProps){
 							sprite = new SpineSprite();
-							sprite.name     = line;		
+							
+							if (string.IsNullOrEmpty( spriteNameAfterProps)){
+								sprite.name     = line;		
+							} else {
+								sprite.name     = spriteNameAfterProps;
+								spriteNameAfterProps  = "";
+							}
 							try{
 								sprite.rotate   = bool.Parse(streamReader.ReadLine().Split(':')[1]);
 								sprite.xy       = SpineUtil.lineToVector2(streamReader.ReadLine());
