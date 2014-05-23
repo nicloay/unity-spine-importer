@@ -455,6 +455,8 @@ namespace UnitySpineImporter{
 			foreach(KeyValuePair<string, SpineSlotAnimation> kvp in slotsAnimation){
 				string slotName = kvp.Key;
 				string defaultAttachment = spineData.slotDefaultAttachments[slotName];
+				if (string.IsNullOrEmpty(defaultAttachment))
+					continue;
 				SpineSlotAnimation slotAnimation = kvp.Value;
 				if (slotAnimation.attachment != null && slotAnimation.attachment.Count > 0){
 					Dictionary<string, AnimationCurve> curveByName = new Dictionary<string, AnimationCurve>();
