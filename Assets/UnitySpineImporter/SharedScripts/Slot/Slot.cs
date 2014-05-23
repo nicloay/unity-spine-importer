@@ -41,6 +41,8 @@ namespace UnitySpineImporter{
 		}
 
 		public void hideAllAttachments(){
+			if (attachments == null)
+				return;
 			foreach(Attachment a in attachments){
 				a.gameObject.SetActive(false);
 			}
