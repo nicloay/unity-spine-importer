@@ -72,8 +72,9 @@ namespace UnitySpineImporter{
 					}
 
 					ModelImporterAnimationType modelImporterAnimationType = getModelImporterAnimationType();
-					SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot,
-					                       pixelsPerUnit, modelImporterAnimationType, updateResources);
+					if (spineData.animations !=null && spineData.animations.Count > 0)
+						SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot,
+						                       pixelsPerUnit, modelImporterAnimationType, updateResources);
 					sk.showDefaulSlots();
 					SpineUtil.buildPrefab(rootGO, directory, name);
 					GameObject.DestroyImmediate(rootGO);
