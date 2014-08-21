@@ -47,7 +47,7 @@ namespace UnitySpineImporter{
 		}
 
 		public static void builAvatarMask(GameObject gameObject, SpineData spineData, Animator animator, string directory, string name){
-			Avatar avatar = AvatarBuilder.BuildGenericAvatar(gameObject,"");
+			UnityEngine.Avatar avatar = AvatarBuilder.BuildGenericAvatar(gameObject,"");
 			animator.avatar = avatar;
 			AvatarMask avatarMask = new AvatarMask();
 			string[] transofrmPaths = getTransformPaths(gameObject, spineData);
@@ -211,7 +211,7 @@ namespace UnitySpineImporter{
 			float2 = tmp;
 		}
 
-		public static GameObject buildSceleton(string name, SpineData data, int pixelsPerUnit, out Dictionary<string,GameObject> boneGOByName, out Dictionary<string, Slot> slotByName){
+		public static GameObject buildSceleton( string name, SpineData data, int pixelsPerUnit, float zStep, out Dictionary<string, GameObject> boneGOByName, out Dictionary<string, Slot> slotByName ) {
 			float ratio = 1.0f / (float)pixelsPerUnit;
 			boneGOByName = new Dictionary<string, GameObject>();
 			slotByName = new Dictionary<string, Slot>();
@@ -240,6 +240,8 @@ namespace UnitySpineImporter{
 				GameObject go = new GameObject(getSlotGOName(spineSlot.name));
 				go.transform.parent = boneGOByName[spineSlot.bone].transform;
 				resetLocalTRS(go);
+				int drawOrder = data.slotOrder[ spineSlot.name ];
+				go.transform.localPosition = new Vector3( 0, 0, (- drawOrder ) * zStep );
 				Slot slot = new Slot();
 				slot.bone = spineSlot.bone;
 				slot.name = spineSlot.name;
@@ -261,7 +263,7 @@ namespace UnitySpineImporter{
 			go.transform.localScale = Vector3.one;
 		}
 
-		public static void addAllAttahcmentsSlots(SpineData spineData, SpritesByName spriteByName, Dictionary<string, Slot> slotByName, float zStep, int pixelsPerUnit, out List<Skin> skins, out AttachmentGOByNameBySlot attachmentGOByNameBySlot){
+		public static void addAllAttahcmentsSlots(SpineData spineData, SpritesByName spriteByName, Dictionary<string, Slot> slotByName, int pixelsPerUnit, out List<Skin> skins, out AttachmentGOByNameBySlot attachmentGOByNameBySlot){
 			float ratio = 1.0f / (float) pixelsPerUnit;
 			skins = new List<Skin>();
 			attachmentGOByNameBySlot= new AttachmentGOByNameBySlot();
@@ -277,7 +279,7 @@ namespace UnitySpineImporter{
 					GameObject slotGO     = slotByName[slotName].gameObject;
 
 					Slot slot = slotByName[slotName];
-
+					string spritePath = spineData.slotPathByName[ slotName ] + "/";
 
 
 					SkinSlot skinSlot = new SkinSlot();
@@ -285,7 +287,7 @@ namespace UnitySpineImporter{
 					skinSlot.gameObject = slotGO;
 					List<SkinSlotAttachment> attachmentList = new List<SkinSlotAttachment>();
 					foreach(KeyValuePair<string, SpineSkinAttachment> kvp3 in spineData.skins[skinName][slotName]){
-						string              attachmenName = kvp3.Key;
+						string              attachmenName	= kvp3.Key;
 						SkinSlotAttachment attachment = new SkinSlotAttachment();
 						attachment.name = attachmenName;
 
@@ -302,6 +304,7 @@ namespace UnitySpineImporter{
 						if (isDefault){
 							parentGO = slotGO;
 							spriteGO = new GameObject(fixedName);
+							spritePath += fixedName;
 							Attachment a = new Attachment(attachmenName, AttachmentType.SINGLE_SPRITE, spriteGO);
 							slot.addAttachment(a);
 						} else {								
@@ -315,19 +318,21 @@ namespace UnitySpineImporter{
 								a = new Attachment(attachmenName, AttachmentType.SKINED_SPRITE, attachmentGO);
 								slot.addAttachment(a);
 							}
-							
+							spritePath += fixedName + "/" + skinName;
 							parentGO = a.gameObject;
 						}
 						
 						attachment.gameObject = spriteGO;
+						attachment.ObPath = spritePath;
 						spriteGO.transform.parent = parentGO.gameObject.transform;
 						// -
 						if (spineAttachment.type.Equals("region")){
 							SpriteRenderer sr = spriteGO.AddComponent<SpriteRenderer>();
 							sr.sprite = sprite;
-							spriteGO.transform.localPosition = getAttachmentPosition(spineAttachment, ratio,-( drawOrder * zStep));
+							spriteGO.transform.localPosition = getAttachmentPosition(spineAttachment, ratio, 0);
 							spriteGO.transform.localRotation = getAttachmentRotation(spineAttachment, spriteByName.rotatedSprites.Contains(sprite));
 							spriteGO.transform.localScale    = getAttachmentScale(spineAttachment);
+							attachment.sprite = sr;
 						} else  if (spineAttachment.type.Equals("boundingbox")) {
 							PolygonCollider2D collider = spriteGO.AddComponent<PolygonCollider2D>();
 							resetLocalTRS(spriteGO);
@@ -384,8 +389,11 @@ namespace UnitySpineImporter{
 		                                string                         rootDirectory,  
 		                                SpineData                      spineData, 
 		                                Dictionary<string, GameObject> boneGOByName, 
+										Dictionary<string, Slot>	   slotByName,
 		                                AttachmentGOByNameBySlot       attachmentGOByNameBySlot,
+										List<Skin>				       skinList,
 		                                int                            pixelsPerUnit,
+										float						   zStep,
 		                                ModelImporterAnimationType     modelImporterAnimationType,
 		                                bool                           updateResources)
 		{
@@ -411,10 +419,12 @@ namespace UnitySpineImporter{
 				if (spineAnimation.bones!=null)
 					addBoneAnimationToClip(animationClip,spineAnimation.bones, spineData, boneGOByName, ratio);
 				if (spineAnimation.slots!=null)
-					addSlotAnimationToClip(animationClip, spineAnimation.slots, spineData, attachmentGOByNameBySlot);
-				if (spineAnimation.draworder!=null)
-					Debug.LogWarning("draworder animation implemented yet");
+					addSlotAnimationToClip(animationClip, spineAnimation.slots, spineData, skinList, attachmentGOByNameBySlot);
 
+				if ( spineAnimation.events != null )
+					AddEvents( animationClip, spineAnimation.events, animationName );
+				if (spineAnimation.draworder!=null)
+					addDrawOrderAnimation( animationClip, spineAnimation.draworder, spineData, zStep, animationName, slotByName ); 
 
 				if (updateCurve){
 					EditorUtility.SetDirty(animationClip);
@@ -432,6 +442,61 @@ namespace UnitySpineImporter{
 				}
 
 			}
+		}
+
+		static void AddEvents(	AnimationClip           clip,
+								List< JsonData >		events, 
+								string					animName  )
+		{
+			List< UnityEngine.AnimationEvent > unityEvents = new List<UnityEngine.AnimationEvent>( );
+			foreach ( JsonData entry in events ) {
+				if ( !entry.IsObject ) Debug.LogError( "WTF JSON!! Event is not an Object??!!" );
+				IDictionary entry_dict = entry as IDictionary;
+
+				UnityEngine.AnimationEvent ev = new UnityEngine.AnimationEvent( );
+
+				if ( entry_dict.Contains( "name" ) ) ev.functionName = ( ( string ) entry[ "name" ] );
+				else Debug.LogError( "WTF JSON!! Missing Name in event data: " + animName );
+
+				if ( entry_dict.Contains( "time" ) ) ev.time = getNumberData( entry[ "time" ], animName );
+				else Debug.LogError( "WTF JSON!! Missing Time in event data: " + animName + " EVENT_NAME: " + ev.functionName );
+
+				bool ParamAdded = false;
+				if ( entry_dict.Contains( "int" ) ) {
+					ev.intParameter = ( int ) entry[ "int" ];
+					ParamAdded = true;
+				}
+
+				if ( entry_dict.Contains( "float" ) ) {
+					if ( ParamAdded ) Debug.LogError( "WTF JSON!! Unity Supports only one event parameter!!!! CLIP NAME: " + animName + " EVENT_NAME: " + entry.ToJson( ) );
+					ev.floatParameter = getNumberData( entry[ "float" ], animName );
+					ParamAdded = true;
+				}
+
+				if ( entry_dict.Contains( "string" ) ) {
+					if ( ParamAdded ) Debug.LogError( "WTF JSON!! Unity Supports only one event parameter!!!! CLIP NAME: " + animName + " EVENT_NAME: " + entry.ToJson( ) );
+					ev.stringParameter = ( string ) entry[ "string" ];
+				}
+
+				ev.messageOptions = SendMessageOptions.RequireReceiver;
+
+				unityEvents.Add( ev );
+			}
+
+			AnimationUtility.SetAnimationEvents( clip, unityEvents.ToArray( ) );
+		}
+
+		static float getNumberData( JsonData data, string animName ) {
+
+			if ( data.IsDouble )
+				return ( float )( ( double )data );
+
+			if ( data.IsInt ) 
+				return ( float )( ( int )data );
+
+			Debug.LogError( "WTF JSON!! Unrecognizable number format!!!! CLIP NAME: " + animName + " JsonData: " + data.ToJson( ) );
+			
+			return 0.0f;
 		}
 
 		static void AddClipToLegacyAnimationComponent(GameObject rootGO, AnimationClip animationClip){
@@ -456,9 +521,76 @@ namespace UnitySpineImporter{
 			return "";
 		}
 
+		public static void addDrawOrderAnimation( AnimationClip								clip,
+												  List<SpineDrawOrderAnimation>				orderAnimation,
+												  SpineData									spineData,
+												  float										zStep,
+												  string									animName,
+												  Dictionary<string, Slot>					slotNameByName )
+		{
+			string[] BaseSlotOrder = new string[ spineData.slotOrder.Count ];
+
+			Dictionary< string, AnimationCurve > Curvs = new Dictionary<string, AnimationCurve>( );
+
+			foreach ( KeyValuePair<string, int> p in spineData.slotOrder ) {
+				BaseSlotOrder[ p.Value ] = p.Key;
+				AnimationCurve Curv = new AnimationCurve();
+				Keyframe keyFrame = new Keyframe( 0.0f, ( - p.Value ) * zStep );
+				Curv.AddKey( keyFrame );
+				Curvs[ p.Key ] = Curv;
+			}
+
+			foreach ( SpineDrawOrderAnimation orderAnim in orderAnimation ) {
+				string[] NewSlotOrder = new string[ BaseSlotOrder.Length ];
+				string[] BaseOrder_Copy = BaseSlotOrder.Clone( ) as string[];
+				for ( int i = 0; i != orderAnim.offsets.Length; i++ ) {
+					SpineDrawOrderAnimationSlot slot = orderAnim.offsets[ i ];
+					int newIdx = spineData.slotOrder[ slot.slot ] + slot.offset;
+					NewSlotOrder[ newIdx ] = slot.slot;
+					int base_idx = Array.IndexOf( BaseOrder_Copy, slot.slot );
+					BaseOrder_Copy[ base_idx ] = null;
+				}
+
+				int pos = 0;
+				for ( int i = 0; i != NewSlotOrder.Length; i++ ) {
+					if ( NewSlotOrder[ i ] == null ) {
+						bool found = false;
+						for ( ; pos != BaseOrder_Copy.Length; ) {
+							if ( BaseOrder_Copy[ pos ] != null ) {
+								found = true;
+								NewSlotOrder[ i ] = BaseOrder_Copy[ pos ];
+								pos++;
+								break;
+							} else pos++;
+						}
+
+						if ( !found ) Debug.LogError( "Can't create new draw order" );
+					}
+				}
+
+				for ( int j = 0; j != NewSlotOrder.Length; j++ ) {
+					float t = ( float )orderAnim.time;
+					float val = ( - j ) * zStep;
+					AnimationCurve curv = Curvs[ NewSlotOrder[ j ] ];
+					float priv_val = curv.Evaluate( t );
+					Keyframe keyFrameY_help = new Keyframe( t, priv_val );
+					Keyframe keyFrameY = new Keyframe( t + 0.00001f, val );
+					curv.AddKey( keyFrameY_help );
+					curv.AddKey( keyFrameY );
+				}
+			}
+
+			for ( int i = 0; i != BaseSlotOrder.Length; i++ ) {
+				string slotpath = spineData.slotPathByName[ BaseSlotOrder[ i ] ];
+				AnimationCurve curv = Curvs[ BaseSlotOrder[ i ] ];
+				AnimationUtility.SetEditorCurve( clip, EditorCurveBinding.FloatCurve( slotpath, typeof( Transform ), "m_LocalPosition.z" ), curv );
+			}
+		}
+
 		public static void addSlotAnimationToClip(AnimationClip                          clip, 
-		                                          Dictionary<string, SpineSlotAnimation> slotsAnimation, 
-		                                          SpineData                              spineData, 
+		                                          Dictionary<string, SpineSlotAnimation> slotsAnimation,
+		                                          SpineData                              spineData,
+												  List<Skin>							 skinList,
 		                                          AttachmentGOByNameBySlot               attachmentGOByNameBySlot)
 		{
 			foreach(KeyValuePair<string, SpineSlotAnimation> kvp in slotsAnimation){
@@ -529,6 +661,57 @@ namespace UnitySpineImporter{
 				}
 
 				if (slotAnimation.color != null && slotAnimation.color.Count >0){
+					AnimationCurve Curv_R = new AnimationCurve( );
+					AnimationCurve Curv_G = new AnimationCurve( );
+					AnimationCurve Curv_B = new AnimationCurve( );
+					AnimationCurve Curv_A = new AnimationCurve( );
+					Keyframe startKeyFrame = new Keyframe( 0.0f, 1.0f );
+					Curv_R.AddKey( startKeyFrame );
+					Curv_G.AddKey( startKeyFrame );
+					Curv_B.AddKey( startKeyFrame );
+					Curv_A.AddKey( startKeyFrame );
+
+					JsonData[] curveData = new JsonData[ slotAnimation.color.Count ];
+					for( int i = 0 ; i != slotAnimation.color.Count ;i++ ) {
+						SpineSlotColorAnimation color = slotAnimation.color[ i ];
+						uint col = Convert.ToUInt32( color.color, 16 );
+						uint r = ( col ) >> 24;
+						uint g = (col & 0xff0000) >> 16;
+						uint b = (col & 0xff00) >> 8;
+						uint a = (col & 0xff);
+						float t = ( (float) (color.time) );
+						Keyframe keyFrame_R = new Keyframe( t, r / 255.0f );
+						Keyframe keyFrame_G = new Keyframe( t, g / 255.0f );
+						Keyframe keyFrame_B = new Keyframe( t, b / 255.0f );
+						Keyframe keyFrame_A = new Keyframe( t, a / 255.0f );
+						Curv_R.AddKey( keyFrame_R );
+						Curv_G.AddKey( keyFrame_G );
+						Curv_B.AddKey( keyFrame_B );
+						Curv_A.AddKey( keyFrame_A );
+						curveData[ i ] = color.curve;
+					}
+
+					setTangents( Curv_R, curveData );
+					setTangents( Curv_G, curveData );
+					setTangents( Curv_B, curveData );
+					setTangents( Curv_A, curveData );
+
+					for ( int i = 0; i != skinList.Count; i++ ) {
+						if ( skinList[ i ].containsSlot( slotName ) ) {
+							SkinSlot skinSlot = skinList[ i ][ slotName ];
+							for ( int j = 0; j != skinSlot.attachments.Length; j++ ) {
+								SpriteRenderer sprite = skinSlot.attachments[ j ].sprite;
+								if ( sprite != null ) {
+									string spritePath = skinSlot.attachments[ j ].ObPath;
+									AnimationUtility.SetEditorCurve( clip, EditorCurveBinding.FloatCurve( spritePath, typeof( SpriteRenderer ), "m_Color.r" ), Curv_R );
+									AnimationUtility.SetEditorCurve( clip, EditorCurveBinding.FloatCurve( spritePath, typeof( SpriteRenderer ), "m_Color.g" ), Curv_G );
+									AnimationUtility.SetEditorCurve( clip, EditorCurveBinding.FloatCurve( spritePath, typeof( SpriteRenderer ), "m_Color.b" ), Curv_B );
+									AnimationUtility.SetEditorCurve( clip, EditorCurveBinding.FloatCurve( spritePath, typeof( SpriteRenderer ), "m_Color.a" ), Curv_A );
+								}
+							}
+						}
+					}
+
 					Debug.LogWarning("slot color animation is not supported yet");
 				}
 			}

@@ -1,15 +1,9 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using LitJson;
+namespace UnitySpineImporter {
+	public class SpineAnimationEvent {
+		public double		time;
+		public string		name;
 
-public class SpineAnimationEvent : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
-	
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	
 	}
 }
