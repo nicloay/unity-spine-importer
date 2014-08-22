@@ -547,42 +547,51 @@ namespace UnitySpineImporter{
 			}
 
 			foreach ( SpineDrawOrderAnimation orderAnim in orderAnimation ) {
-				string[] NewSlotOrder = new string[ BaseSlotOrder.Length ];
-				string[] BaseOrder_Copy = BaseSlotOrder.Clone( ) as string[];
-				for ( int i = 0; i != orderAnim.offsets.Length; i++ ) {
-					SpineDrawOrderAnimationSlot slot = orderAnim.offsets[ i ];
-					int newIdx = spineData.slotOrder[ slot.slot ] + slot.offset;
-					NewSlotOrder[ newIdx ] = slot.slot;
-					int base_idx = Array.IndexOf( BaseOrder_Copy, slot.slot );
-					BaseOrder_Copy[ base_idx ] = null;
-				}
+				string[] NewSlotOrder = null;
+				if ( orderAnim.offsets != null ) {
+					NewSlotOrder = new string[ BaseSlotOrder.Length ];
+					string[] BaseOrder_Copy = BaseSlotOrder.Clone( ) as string[];
 
-				int pos = 0;
-				for ( int i = 0; i != NewSlotOrder.Length; i++ ) {
-					if ( NewSlotOrder[ i ] == null ) {
-						bool found = false;
-						for ( ; pos != BaseOrder_Copy.Length; ) {
-							if ( BaseOrder_Copy[ pos ] != null ) {
-								found = true;
-								NewSlotOrder[ i ] = BaseOrder_Copy[ pos ];
-								pos++;
-								break;
-							} else pos++;
-						}
-
-						if ( !found ) Debug.LogError( "Can't create new draw order" );
+					for ( int i = 0; i != orderAnim.offsets.Length; i++ ) {
+						SpineDrawOrderAnimationSlot slot = orderAnim.offsets[ i ];
+						int newIdx = spineData.slotOrder[ slot.slot ] + slot.offset;
+						NewSlotOrder[ newIdx ] = slot.slot;
+						int base_idx = Array.IndexOf( BaseOrder_Copy, slot.slot );
+						BaseOrder_Copy[ base_idx ] = null;
 					}
-				}
+
+					int pos = 0;
+					for ( int i = 0; i != NewSlotOrder.Length; i++ ) {
+						if ( NewSlotOrder[ i ] == null ) {
+							bool found = false;
+							for ( ; pos != BaseOrder_Copy.Length; ) {
+								if ( BaseOrder_Copy[ pos ] != null ) {
+									found = true;
+									NewSlotOrder[ i ] = BaseOrder_Copy[ pos ];
+									pos++;
+									break;
+								} else pos++;
+							}
+
+							if ( !found ) Debug.LogError( "Can't create new draw order" );
+						}
+					}
+				} else NewSlotOrder = BaseSlotOrder;
 
 				for ( int j = 0; j != NewSlotOrder.Length; j++ ) {
 					float t = ( float )orderAnim.time;
 					float val = ( - j ) * zStep;
 					AnimationCurve curv = Curvs[ NewSlotOrder[ j ] ];
 					float priv_val = curv.Evaluate( t );
-					Keyframe keyFrameY_help = new Keyframe( t, priv_val );
-					Keyframe keyFrameY = new Keyframe( t + 0.00001f, val );
-					curv.AddKey( keyFrameY_help );
-					curv.AddKey( keyFrameY );
+					if ( t > 0.0f ) {
+						Keyframe keyFrameY_help = new Keyframe( t - 0.00001f, priv_val );
+						Keyframe keyFrameY = new Keyframe( t, val );
+						curv.AddKey( keyFrameY_help );
+						curv.AddKey( keyFrameY );
+					} else {
+						Keyframe keyFrameY = new Keyframe( t, val );
+						curv.AddKey( keyFrameY );
+					}
 				}
 			}
 
