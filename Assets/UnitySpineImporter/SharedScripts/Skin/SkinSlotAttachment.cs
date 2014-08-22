@@ -7,5 +7,7 @@ namespace UnitySpineImporter{
 	public class SkinSlotAttachment {
 		public string name;
 		public GameObject gameObject;
+		public SpriteRenderer sprite;
+		public string ObPath;
 	}
 }
