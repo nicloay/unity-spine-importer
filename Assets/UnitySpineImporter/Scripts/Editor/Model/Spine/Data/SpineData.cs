@@ -38,7 +38,6 @@ namespace UnitySpineImporter{
 			if (!File.Exists(spineDataFilePath))
 				throw new SpineDatatCreationException("provided file does not exists");
 			try{
-				//KUBA!!!!!
 				data = LitJson.JsonMapper.ToObject<SpineData>(File.ReadAllText(spineDataFilePath));
 			} catch (LitJson.JsonException e){
 				throw new SpineDatatCreationException("problem with parse json data \n"+e.Message);
