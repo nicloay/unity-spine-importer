@@ -56,15 +56,16 @@ namespace UnitySpineImporter{
 			Dictionary<string, Slot>        slotByName;
 			List<Skin>                      skins;
 			AttachmentGOByNameBySlot 		attachmentGOByNameBySlot;
+
 			if (File.Exists(path)){
 				try{
 					SpineMultiatlas spineMultiAtlas = SpineMultiatlas.deserializeFromFile(atlasPath    );
 					SpineData       spineData       = SpineData      .deserializeFromFile(path);
 
 					SpineUtil.updateImporters(spineMultiAtlas, directory, pixelsPerUnit, out spriteByName);
-					GameObject rootGO = SpineUtil.buildSceleton(name, spineData, pixelsPerUnit, out boneGOByName, out slotByName);
+					GameObject rootGO = SpineUtil.buildSceleton(name, spineData, pixelsPerUnit, zStep, out boneGOByName, out slotByName);
 					rootGO.name = name;
-					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, zStep, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
+					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
 					SkinController sk = SpineUtil.addSkinController(rootGO, spineData, skins, slotByName);
 					if (animationImportType == AnimationImportType.MECANIM){
 						Animator animator = SpineUtil.addAnimator(rootGO);
@@ -74,8 +75,8 @@ namespace UnitySpineImporter{
 
 					ModelImporterAnimationType modelImporterAnimationType = getModelImporterAnimationType();
 					if (spineData.animations !=null && spineData.animations.Count > 0)
-						SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, attachmentGOByNameBySlot,
-						                       pixelsPerUnit, modelImporterAnimationType, updateResources);
+						SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, slotByName, attachmentGOByNameBySlot, skins,
+											   pixelsPerUnit, zStep, modelImporterAnimationType, updateResources );
 					sk.showDefaulSlots();
 					SpineUtil.buildPrefab(rootGO, directory, name);
 					GameObject.DestroyImmediate(rootGO);
