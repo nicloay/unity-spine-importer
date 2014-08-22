@@ -1,0 +1,59 @@
+{
+"skeleton": { "spine": "1.9.15", "hash": "HXT4BLqTX7yvfB45ju0PgO/401s", "width": 128, "height": 128 },
+"bones": [
+	{ "name": "root" },
+	{ "name": "bone", "parent": "root" },
+	{ "name": "bone2", "parent": "root" },
+	{ "name": "bone3", "parent": "bone2" }
+],
+"ik": [],
+"slots": [
+	{ "name": "1", "bone": "root" },
+	{ "name": "slot2", "bone": "bone", "attachment": "2" },
+	{ "name": "slot3", "bone": "bone2", "attachment": "3" },
+	{ "name": "slot4", "bone": "bone3", "attachment": "4" }
+],
+"skins": {
+	"default": {
+		"1": {
+			"1": { "width": 128, "height": 128 }
+		},
+		"slot2": {
+			"2": { "width": 128, "height": 128 }
+		},
+		"slot3": {
+			"3": { "width": 128, "height": 128 }
+		},
+		"slot4": {
+			"4": { "width": 128, "height": 128 }
+		}
+	}
+},
+"animations": {
+	"animation": {
+		"draworder": [
+			{ "time": 0 },
+			{
+				"time": 0.3333,
+				"offsets": [
+					{ "slot": "slot4", "offset": -2 }
+				]
+			},
+			{
+				"time": 0.6666,
+				"offsets": [
+					{ "slot": "1", "offset": 3 },
+					{ "slot": "slot4", "offset": -3 }
+				]
+			},
+			{
+				"time": 1,
+				"offsets": [
+					{ "slot": "slot2", "offset": 2 },
+					{ "slot": "slot4", "offset": -3 }
+				]
+			}
+		]
+	}
+}
+}
