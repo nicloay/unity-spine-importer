@@ -968,6 +968,7 @@ namespace UnitySpineImporter{
 					AnimationCurve localRotationW = new AnimationCurve();
 
 					JsonData[] curveData = new JsonData[boneAnimation.rotate.Count];
+					Quaternion baseRotation = Quaternion.identity;
 					for (int i = 0; i < boneAnimation.rotate.Count; i++) {
 						float origAngle = (float)boneAnimation.rotate[i].angle;
 						if (origAngle > 0)
@@ -989,17 +990,10 @@ namespace UnitySpineImporter{
 
 					}
 
-					fixAngles  (localRotationX   , curveData);
-					setTangents(localRotationX   , curveData);
-
-					fixAngles  (localRotationY   , curveData);
-					setTangents(localRotationY   , curveData);
-
-					fixAngles  (localRotationZ   , curveData);
-					setTangents(localRotationZ   , curveData);
-
-					fixAngles  (localRotationW   , curveData);
-					setTangents(localRotationW   , curveData);
+					fixAngleCurve  (localRotationX   , curveData, baseRotation.x);
+					fixAngleCurve  (localRotationY   , curveData, baseRotation.y);
+					fixAngleCurve  (localRotationZ   , curveData, baseRotation.z);
+					fixAngleCurve  (localRotationW   , curveData, baseRotation.w);
 
 					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.x"), localRotationX);
 					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.y"), localRotationY);
@@ -1034,6 +1028,23 @@ namespace UnitySpineImporter{
 			}
 		}
 
+
+
+		static void fixAngleCurve(AnimationCurve animationCurve, JsonData[] curveData, float defSingleStepValue){
+			fixSingleStep(animationCurve, defSingleStepValue);
+			fixAngles    (animationCurve, curveData);
+			setTangents  (animationCurve, curveData);
+		}
+
+		static void fixSingleStep (AnimationCurve animationCurve, float defSingleStepValue)
+		{
+			if (animationCurve.keys.Length == 1 && animationCurve.keys[0].time  != 0.0f){
+				Keyframe key = animationCurve.keys[0];
+				key.time = 0.0f;
+				key.value = defSingleStepValue;
+				animationCurve.AddKey(key);
+			}
+		}
 
 		static void fixAngles(AnimationCurve curve, JsonData[] curveData){
 			if (curve.keys.Length <3)
