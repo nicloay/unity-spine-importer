@@ -8,6 +8,7 @@ using UnityEditorInternal;
 using CurveExtended;
 using LitJson;
 using System.Reflection;
+using UnityEditor.Animations;
 
 namespace UnitySpineImporter{
 	public class AtlasImageNotFoundException: System.Exception{
@@ -393,7 +394,7 @@ namespace UnitySpineImporter{
 										List<Skin>				       skinList,
 		                                int                            pixelsPerUnit,
 										float						   zStep,
-		                                ModelImporterAnimationType     modelImporterAnimationType,
+		                                bool						   useLegacyAnimation,
 		                                bool                           updateResources)
 		{
 			float ratio = 1.0f / (float)pixelsPerUnit;
@@ -413,8 +414,7 @@ namespace UnitySpineImporter{
 						updateCurve = true;
 					}
 				}
-
-				AnimationUtility.SetAnimationType(animationClip, modelImporterAnimationType);
+				animationClip.legacy = useLegacyAnimation;
 				if (spineAnimation.bones!=null)
 					addBoneAnimationToClip(animationClip,spineAnimation.bones, spineData, boneGOByName, ratio);
 				if (spineAnimation.slots!=null)
@@ -434,10 +434,11 @@ namespace UnitySpineImporter{
 					AssetDatabase.CreateAsset(animationClip, assetPath);
 					AssetDatabase.SaveAssets();
 
-					if (modelImporterAnimationType == ModelImporterAnimationType.Generic)
-						AddClipToAnimatorComponent(rootGO,animationClip);
-					else 
+					if (useLegacyAnimation){
 						AddClipToLegacyAnimationComponent(rootGO, animationClip);
+					} else {
+						AddClipToAnimatorComponent(rootGO,animationClip);
+					}
 				}
 
 			}
@@ -1076,13 +1077,14 @@ namespace UnitySpineImporter{
 			Animator animator = animatedObject.GetComponent<Animator>();
 			if ( animator == null)
 				animator = animatedObject.AddComponent<Animator>();
-			AnimatorController animatorController = AnimatorController.GetEffectiveAnimatorController(animator);
+
+			UnityEditor.Animations.AnimatorController animatorController =  UnityInternalMethods.GetEffectiveAnimatorController(animator);
 			if (animatorController == null)
 			{
 				string path =  Path.GetDirectoryName( AssetDatabase.GetAssetPath(newClip)) +"/"+animatedObject.name+".controller";
 
-             	AnimatorController controllerForClip = AnimatorController.CreateAnimatorControllerAtPathWithClip(path, newClip);
-				AnimatorController.SetAnimatorController(animator, controllerForClip);
+             	UnityEditor.Animations.AnimatorController controllerForClip = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPathWithClip(path, newClip);
+				UnityEditor.Animations.AnimatorController.SetAnimatorController(animator, controllerForClip);
 				if (controllerForClip != null)
 					return newClip;
 				else
@@ -1090,7 +1092,7 @@ namespace UnitySpineImporter{
 			}
 			else
 			{
-				AnimatorController.AddAnimationClipToController(animatorController, newClip);
+				animatorController.AddMotion((Motion)newClip);
 				return newClip;
 			}
 		}
