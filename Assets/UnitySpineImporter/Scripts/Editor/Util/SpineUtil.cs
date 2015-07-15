@@ -7,7 +7,7 @@ using System;
 using UnityEditorInternal;
 using CurveExtended;
 using LitJson;
-using System.Reflection;
+using UnityEditor.Animations;
 
 namespace UnitySpineImporter{
 	public class AtlasImageNotFoundException: System.Exception{
@@ -85,12 +85,8 @@ namespace UnitySpineImporter{
 		static void fixTextureSize(string imagePath){			 
 			TextureImporter importer =  TextureImporter.GetAtPath(imagePath) as TextureImporter;
 			if (importer != null) {
-				object[] args = new object[2] { 0, 0 };
-				MethodInfo mi = typeof(TextureImporter).GetMethod("GetWidthAndHeight", BindingFlags.NonPublic | BindingFlags.Instance);
-				mi.Invoke(importer, args);
-				
-				int width = (int)args[0];
-				int height = (int)args[1];
+				int width, height;
+				UnityInternalMethods.GetTextureSize(importer, out width, out height);
 
 				int max = Mathf.Max(width,height);
 				if (max > 4096){
@@ -393,7 +389,7 @@ namespace UnitySpineImporter{
 										List<Skin>				       skinList,
 		                                int                            pixelsPerUnit,
 										float						   zStep,
-		                                ModelImporterAnimationType     modelImporterAnimationType,
+		                                bool						   useLegacyAnimation,
 		                                bool                           updateResources)
 		{
 			float ratio = 1.0f / (float)pixelsPerUnit;
@@ -413,8 +409,7 @@ namespace UnitySpineImporter{
 						updateCurve = true;
 					}
 				}
-
-				AnimationUtility.SetAnimationType(animationClip, modelImporterAnimationType);
+				animationClip.legacy = useLegacyAnimation;
 				if (spineAnimation.bones!=null)
 					addBoneAnimationToClip(animationClip,spineAnimation.bones, spineData, boneGOByName, ratio);
 				if (spineAnimation.slots!=null)
@@ -434,10 +429,11 @@ namespace UnitySpineImporter{
 					AssetDatabase.CreateAsset(animationClip, assetPath);
 					AssetDatabase.SaveAssets();
 
-					if (modelImporterAnimationType == ModelImporterAnimationType.Generic)
-						AddClipToAnimatorComponent(rootGO,animationClip);
-					else 
+					if (useLegacyAnimation){
 						AddClipToLegacyAnimationComponent(rootGO, animationClip);
+					} else {
+						AddClipToAnimatorComponent(rootGO,animationClip);
+					}
 				}
 
 			}
@@ -968,6 +964,7 @@ namespace UnitySpineImporter{
 					AnimationCurve localRotationW = new AnimationCurve();
 
 					JsonData[] curveData = new JsonData[boneAnimation.rotate.Count];
+					Quaternion baseRotation = Quaternion.identity;
 					for (int i = 0; i < boneAnimation.rotate.Count; i++) {
 						float origAngle = (float)boneAnimation.rotate[i].angle;
 						if (origAngle > 0)
@@ -989,17 +986,10 @@ namespace UnitySpineImporter{
 
 					}
 
-					fixAngles  (localRotationX   , curveData);
-					setTangents(localRotationX   , curveData);
-
-					fixAngles  (localRotationY   , curveData);
-					setTangents(localRotationY   , curveData);
-
-					fixAngles  (localRotationZ   , curveData);
-					setTangents(localRotationZ   , curveData);
-
-					fixAngles  (localRotationW   , curveData);
-					setTangents(localRotationW   , curveData);
+					fixAngleCurve  (localRotationX   , curveData, baseRotation.x);
+					fixAngleCurve  (localRotationY   , curveData, baseRotation.y);
+					fixAngleCurve  (localRotationZ   , curveData, baseRotation.z);
+					fixAngleCurve  (localRotationW   , curveData, baseRotation.w);
 
 					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.x"), localRotationX);
 					AnimationUtility.SetEditorCurve(clip,EditorCurveBinding.FloatCurve(bonePath,typeof(Transform),"m_LocalRotation.y"), localRotationY);
@@ -1035,6 +1025,23 @@ namespace UnitySpineImporter{
 		}
 
 
+
+		static void fixAngleCurve(AnimationCurve animationCurve, JsonData[] curveData, float defSingleStepValue){
+			fixSingleStep(animationCurve, defSingleStepValue);
+			fixAngles    (animationCurve, curveData);
+			setTangents  (animationCurve, curveData);
+		}
+
+		static void fixSingleStep (AnimationCurve animationCurve, float defSingleStepValue)
+		{
+			if (animationCurve.keys.Length == 1 && animationCurve.keys[0].time  != 0.0f){
+				Keyframe key = animationCurve.keys[0];
+				key.time = 0.0f;
+				key.value = defSingleStepValue;
+				animationCurve.AddKey(key);
+			}
+		}
+
 		static void fixAngles(AnimationCurve curve, JsonData[] curveData){
 			if (curve.keys.Length <3)
 				return;
@@ -1065,13 +1072,14 @@ namespace UnitySpineImporter{
 			Animator animator = animatedObject.GetComponent<Animator>();
 			if ( animator == null)
 				animator = animatedObject.AddComponent<Animator>();
-			AnimatorController animatorController = AnimatorController.GetEffectiveAnimatorController(animator);
+
+			UnityEditor.Animations.AnimatorController animatorController =  UnityInternalMethods.GetEffectiveAnimatorController(animator);
 			if (animatorController == null)
 			{
 				string path =  Path.GetDirectoryName( AssetDatabase.GetAssetPath(newClip)) +"/"+animatedObject.name+".controller";
 
-             	AnimatorController controllerForClip = AnimatorController.CreateAnimatorControllerAtPathWithClip(path, newClip);
-				AnimatorController.SetAnimatorController(animator, controllerForClip);
+             	UnityEditor.Animations.AnimatorController controllerForClip = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPathWithClip(path, newClip);
+				UnityEditor.Animations.AnimatorController.SetAnimatorController(animator, controllerForClip);
 				if (controllerForClip != null)
 					return newClip;
 				else
@@ -1079,7 +1087,7 @@ namespace UnitySpineImporter{
 			}
 			else
 			{
-				AnimatorController.AddAnimationClipToController(animatorController, newClip);
+				animatorController.AddMotion((Motion)newClip);
 				return newClip;
 			}
 		}
