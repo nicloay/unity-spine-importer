@@ -7,7 +7,6 @@ using System;
 using UnityEditorInternal;
 using CurveExtended;
 using LitJson;
-using System.Reflection;
 using UnityEditor.Animations;
 
 namespace UnitySpineImporter{
@@ -86,12 +85,8 @@ namespace UnitySpineImporter{
 		static void fixTextureSize(string imagePath){			 
 			TextureImporter importer =  TextureImporter.GetAtPath(imagePath) as TextureImporter;
 			if (importer != null) {
-				object[] args = new object[2] { 0, 0 };
-				MethodInfo mi = typeof(TextureImporter).GetMethod("GetWidthAndHeight", BindingFlags.NonPublic | BindingFlags.Instance);
-				mi.Invoke(importer, args);
-				
-				int width = (int)args[0];
-				int height = (int)args[1];
+				int width, height;
+				UnityInternalMethods.GetTextureSize(importer, out width, out height);
 
 				int max = Mathf.Max(width,height);
 				if (max > 4096){
