@@ -6,15 +6,11 @@ using System.Collections.Generic;
 
 
 namespace UnitySpineImporter{
-	public enum AnimationImportType{
-		MECANIM,
-		LEGACY
-	}
 
 	public class SpineImporterWizard :ScriptableWizard {
 		public int pixelsPerUnit = 100;
 		public bool buildAvatarMask = true;
-		public AnimationImportType animationImportType = AnimationImportType.MECANIM;
+		public bool useLegacyAnimation = false; //false - means mecanim
 		public bool updateResources = true;
 		public float zStep = 0.01f;
 		[HideInInspector]
@@ -42,7 +38,7 @@ namespace UnitySpineImporter{
 			else 
 				errorString ="";
 			isValid = errorString.Equals("");
-			if (animationImportType == AnimationImportType.LEGACY && buildAvatarMask)
+			if (useLegacyAnimation && buildAvatarMask)
 				helpString += "\n buildAvatarMask will be ignored";
 		}
 
@@ -67,16 +63,15 @@ namespace UnitySpineImporter{
 					rootGO.name = name;
 					SpineUtil.addAllAttahcmentsSlots(spineData, spriteByName, slotByName, pixelsPerUnit, out skins, out attachmentGOByNameBySlot);
 					SkinController sk = SpineUtil.addSkinController(rootGO, spineData, skins, slotByName);
-					if (animationImportType == AnimationImportType.MECANIM){
+					if (!useLegacyAnimation){
 						Animator animator = SpineUtil.addAnimator(rootGO);
 						if (buildAvatarMask)
 							SpineUtil.builAvatarMask(rootGO,spineData, animator, directory, name);
 					}
 
-					ModelImporterAnimationType modelImporterAnimationType = getModelImporterAnimationType();
 					if (spineData.animations !=null && spineData.animations.Count > 0)
 						SpineUtil.addAnimation(rootGO, directory, spineData, boneGOByName, slotByName, attachmentGOByNameBySlot, skins,
-											   pixelsPerUnit, zStep, modelImporterAnimationType, updateResources );
+											   pixelsPerUnit, zStep, useLegacyAnimation, updateResources );
 					sk.showDefaulSlots();
 					SpineUtil.buildPrefab(rootGO, directory, name);
 					GameObject.DestroyImmediate(rootGO);
@@ -89,19 +84,6 @@ namespace UnitySpineImporter{
 					Debug.LogException(e);
 				}
 			}
-		}
-
-		ModelImporterAnimationType getModelImporterAnimationType(){
-			ModelImporterAnimationType result = ModelImporterAnimationType.Generic;
-			switch(animationImportType){
-			case AnimationImportType.LEGACY:
-				result = ModelImporterAnimationType.Legacy;
-				break;
-			case AnimationImportType.MECANIM:
-				result = ModelImporterAnimationType.Generic;
-				break;
-			}
-			return result;
 		}
 		
 		static string getAtlasFilePath(string path){
